@@ -1,0 +1,13 @@
+PASS ideal                L=0.00895955 psi=0.209987 R=1.86627 flags=1/1 status=20 iter=4000
+PASS inverter_error       L=0.00895955 psi=0.209987 R=1.86627 flags=1/1 status=20 iter=4000
+PASS noise                L=0.00896403 psi=0.210064 R=1.86659 flags=1/1 status=20 iter=4000
+PASS reverse_speed        L=0.00895955 psi=0.209987 R=1.86673 flags=1/1 status=20 iter=4000
+PASS rank_deficient       L=0 psi=0 R=0 flags=0/0 status=-8 iter=0
+PASS incomplete           L=0 psi=0 R=0 flags=0/0 status=-2 iter=0
+PASS current_drift        L=0 psi=0 R=0 flags=0/0 status=-6 iter=0
+PASS Rs_unobservable      L=0.00895955 psi=0.209988 R=0 flags=1/0 status=10 iter=4000
+PASS nonfinite            L=0 psi=0 R=0 flags=0/0 status=-1 iter=0
+PASS voltage_drift        L=0 psi=0 R=0 flags=0/0 status=-3 iter=0
+PASS ill_conditioned      L=0 psi=0 R=0 flags=0/0 status=-8 iter=0
+PASS PLL state sequence, seven 7000-tick stages, offset and reset
+PASS high-rate LPF + decimation + actual RLS: L=0.00895962 H psi=0.209987 Wb R=1.86634 ohm, iterations=4000
