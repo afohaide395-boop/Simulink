@@ -10,4 +10,4 @@ PASS nonfinite            L=0 psi=0 R=0 flags=0/0 status=-1 iter=0
 PASS voltage_drift        L=0 psi=0 R=0 flags=0/0 status=-3 iter=0
 PASS ill_conditioned      L=0 psi=0 R=0 flags=0/0 status=-8 iter=0
 PASS PLL state sequence, seven 7000-tick stages, offset and reset
-PASS high-rate LPF + decimation + actual RLS: L=0.00895962 H psi=0.209987 Wb R=1.86634 ohm, iterations=4000
+PASS same-rate 100 us LPF + actual RLS: L=0.00895957 H psi=0.209987 Wb R=1.86625 ohm, iterations=4000

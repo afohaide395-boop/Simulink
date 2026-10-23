@@ -1,0 +1,9 @@
+PASS top-level panel grouping: 179 -> 147 blocks, five filters/monitors inside dedicated subsystem
+PASS all five actual source/LPF/RLS interfaces use 100us; filter coefficients retuned to Ts, redundant holds removed
+PASS XML, block IDs, line endpoints, unique drivers, moved subsystem relationships and Stateflow instance path
+PASS new local/global tags resolve; RLS arithmetic unchanged; MATLAB syntax parsing
+PASS solver/multitasking/rate-transition diagnostics configuration unchanged (errors remain enabled)
+12300 overlapping blocks: []
+12300 segments crossing other block interiors: 0
+12400 overlapping blocks: []
+12400 segments crossing other block interiors: 0

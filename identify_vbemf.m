@@ -1,7 +1,7 @@
 function [y,err1,err2] = identify_vbemf(ud,uq,id,iq,we,Vstate)
 %#codegen
-% Inputs have ALREADY passed matched 50 Hz anti-alias filters at Tsim,
-% followed by sampling at Ts=100 us. Do not filter after aliasing instead.
+% Inputs pass matched 50 Hz low-pass filters at their ACTUAL Ts=100 us.
+% Sources already have rate Ts; this cannot recover any upstream aliasing.
 % Columns 1:7 retain v1 meanings. Diagnostics 8:15:
 % status, condition, max voltage drift, max dq mismatch, RLS iteration,
 % normalized innovation, relative Rs denominator, samples in current stage.
