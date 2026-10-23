@@ -1,0 +1,5 @@
+PASS all 5 original physical connection trees and nets, including Src-only DC-negative/ground branch
+PASS power source, bridge, ground, motor, powergui and I/F startup block parameters preserved
+PASS I/F iq source, selector control and selected-iq command signal connections
+PASS regression: test rejects the previous model with the missing DC return
+Electrical/mechanical startup has NOT been simulated by this Python check.
