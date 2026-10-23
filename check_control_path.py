@@ -75,7 +75,7 @@ def check(content):
     assert graph.inputs['12073#in:4']=='12580#out:1'
     assert graph.inputs['12073::32#in:4']=='12073::38#out:1'
     print('PASS serialized control graph: I/F selects 7A; sensorless follows speed PI; hold selects memory; release follows PI again')
-    print('PASS all five filtered regressor channels map correctly; accepted-state ack crosses exactly one initialized Ts delay to PLL input4')
+    print('PASS 五路低通映射正确；采样完成/数值错误反馈经一拍Ts延迟到PLL输入4，不作质量验收')
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--model',type=Path,default=Path(__file__).with_name('reduce_emf_identified.slx'))

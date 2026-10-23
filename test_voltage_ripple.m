@@ -1,5 +1,5 @@
 function test_voltage_ripple
-% 回归测试：稳定的周期纹波不应触发超时；真实慢漂移仍必须被拒绝。
+% 回归测试：周期平均正常工作，慢漂移及残余纹波只提示、不再拒绝采样。
 % 所有输入均为50 Hz低通之后的信号，模拟仍然残留的电频及六倍频纹波。
 folder=fileparts(mfilename('fullpath'));addpath(folder);
 R=1.8665;L=.00896;psi=.21;states=[2 3 4 6 7 8];
@@ -43,20 +43,20 @@ for w=[210.5 157 50 -210.5]
     fprintf('PASS 周期纹波 w=%g：L=%g，磁链=%g，Rs=%g；电压RMS %g/%g -> %g/%g V，N=%g\n', ...
         w,y(3),y(4),y(6),diag(1),diag(2),diag(3),diag(4),diag(9));
 end
-% 周期平均的直流增益为1，对斜坡只产生延迟，不能消除真实慢漂移。
+% 周期平均保留慢漂移；调试版仍保存窗口，-3仅出现在诊断提示中。
 clear identify_vbemf
-for n=1:30000
+for n=1:6000
     y=identify_vbemf(-10+.001*n,52,0,4,220,2);
-    if y(16)<0,break;end
+    if y(16)==2 || y(16)<0,break;end
 end
-assert(y(8)==-3 && y(17)==-3 && y(16)==-2 && y(22)>1 && isnan(y(3)));
-fprintf('PASS 电压慢漂移保留-3中止；漂移/门限=%g，未伪造参数\n',y(22));
-% 80 Hz并非本例电频的整数倍，平均后仍过大的剩余纹波应独立报告-13。
+assert(y(8)==1 && y(17)==-3 && y(16)==2 && y(22)>1);
+fprintf('PASS 电压慢漂移仅提示-3，采样仍完成；漂移/门限=%g\n',y(22));
+% 80 Hz非同步纹波仅记录-13，不再把诊断变成运行错误。
 clear identify_vbemf
-for n=1:30000
+for n=1:6000
     y=identify_vbemf(-10+5*sin(2*pi*80*n*1e-4),52,0,4,220,2);
-    if y(16)<0,break;end
+    if y(16)==2 || y(16)<0,break;end
 end
-assert(y(8)==-13 && y(17)==-13 && all(y(22:23)<=1) && y(24)>1);
-fprintf('PASS 非同步剩余纹波单独报告-13；纹波/门限=%g，均值漂移合格\n',y(24));
+assert(y(8)==1 && y(17)==-13 && y(16)==2 && all(y(22:23)<=1) && y(24)>1);
+fprintf('PASS 非同步剩余纹波仅提示-13，采样仍完成；纹波/门限=%g\n',y(24));
 end

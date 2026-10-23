@@ -26,7 +26,7 @@ for c=1:numel(names)
         ud=R*di-w*L*qi-w*psi*sin(d)+D(1)*dead;
         uq=R*qi+w*L*di+w*psi*cos(d)+D(2)*dead;
         accepted=0;
-        for n=1:30000
+        for n=1:6000
             u=[ud uq di qi w];
             if c==3,u=u+[.01*randn .01*randn .001*randn .001*randn .03*randn];end
             if c==10 && s==1,u(1)=u(1)+.001*n;end
@@ -37,7 +37,7 @@ for c=1:numel(names)
         end
         if failed,break;end
         assert(accepted>=4000,'Collector accepted before settle+window completed');
-        if c==12 && s==1,assert(accepted>=5000,'Nonsteady window was accepted instead of retried');end
+        assert(accepted<=4400,'诊断门限不应再使采样等待或超时。');
     end
     if c==9
         y=identify_vbemf(NaN,0,0,0,w,8);failed=true;
@@ -50,7 +50,15 @@ for c=1:numel(names)
         end
         assert(numel(e1)==400 && numel(e2)==400);
     end
-    good=c<=4 || c==8 || c==12;
+    good=c<=4 || c==8;
+    if ~failed && c~=6
+        assert(y(8)==30 && y(5)==1 && y(12)==4000);
+        assert(all(isfinite(y([3 4]))),'调试模式必须保留实际递推结果。');
+        assert(all(diff(history(402:end,3))==1));
+        if c==5 || c==11,assert(y(17)==-8);end
+        if c==7,assert(y(17)==-6);end
+        if c==10 || c==12,assert(y(17)==-3);end
+    end
     if good
         assert(y(5)==1,[names{c} ': expected valid L/psi']);
         assert(y(12)==4000 && all(diff(history(402:end,3))==1));
@@ -63,7 +71,7 @@ for c=1:numel(names)
             rtol=.02;if c==3,rtol=.05;end
             assert(y(7)==1 && abs(y(6)/R-1)<rtol);
         end
-    else
+    elseif failed || c==6
         assert(y(5)==0 && y(7)==0 && y(8)<0);
         assert(isnan(y(3)) && isnan(y(4)),'Rejected data produced estimates');
     end
@@ -85,10 +93,10 @@ for n=1:100000
     final=identify_vbemf(ud,uq,dd,qq,W,double(state));ack=final(16);
 end
 assert(all(seen([1 3:10])) && ~seen(11),'Handshake phase sequence failed');
-assert(all(ticks(3:9)>=4000));assert(final(5)==1 && final(12)==4000);
+assert(all(ticks(3:9)>=6000));assert(final(5)==1 && final(12)==4000 && final(8)==30);
 [~,~,off,state]=pll_vbemf(0,E,0,0);assert(state==0 && off==0);
-fprintf('PASS coupled actual PLL/collector handshake, 4000 updates, offset and mode reset\n');
-% 没有合格窗口确认时，不允许仅靠计时进入正注入阶段。
+fprintf('PASS 固定时序PLL与实际采集器联动，4000次更新、Id偏移及模式复位\n');
+% 没有质量确认也应按固定时长推进，不再把用户卡在某个采样阶段。
 clear pll_vbemf
 th=0;
 for n=1:40000
@@ -96,7 +104,10 @@ for n=1:40000
     [theta,speed,~,state]=pll_vbemf(-E*sin(delta),E*cos(delta),double(t>=1),0);
     th=mod(theta+Ts*speed,2*pi);
 end
-assert(state==2,'State advanced without accepted data');
+assert(state>2 && state~=10,'采样阶段仍被质量确认阻断。');
+clear pll_vbemf
+for n=1:6000,[~,~,~,state]=pll_vbemf(0,.1,1,0);end
+assert(state==2,'低反电动势诊断不应中止实验。');
 [~,~,off,state]=pll_vbemf(0,E,1,-2);assert(state==10 && off==0);
-fprintf('PASS no ack keeps state2; rejected-window ack aborts to state10 and removes injection\n');
+fprintf('PASS 无质量确认仍按时序推进；仅保留非有限输入的数值中止通路\n');
 end

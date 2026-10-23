@@ -1,3 +1,3 @@
 PASS serialized control graph: I/F selects 7A; sensorless follows speed PI; hold selects memory; release follows PI again
-PASS all five filtered regressor channels map correctly; accepted-state ack crosses exactly one initialized Ts delay to PLL input4
+PASS 五路低通映射正确；采样完成/数值错误反馈经一拍Ts延迟到PLL输入4，不作质量验收
 PASS regression: previous selected-iq self-feedback is detected as a cyclic dependency

@@ -6,12 +6,11 @@ function [theta,we,id_offset,vfl_state] = pll_vbemf(Ed_hat,Eq_hat,IF_sensorless_
 % 加入文献12.4.1的虚拟反电动势注入与六段采样状态机。
 % 保留原有I/F切换输入及四路输出，外围控制连接保持完整。
 %==================================================
-persistent theta_z speed_i state tick stable speed_f amp phase_f phase2 speed_lp lowE
+persistent theta_z speed_i state tick stable amp
 if isempty(theta_z)
     theta_z = 0;
     speed_i = 0;
-    state=0; tick=0; stable=0; speed_f=0; amp=0;
-    phase_f=0; phase2=0; speed_lp=0; lowE=0;
+    state=0; tick=0; stable=0; amp=0;
 end
 if ~isfinite(Ed_hat) || ~isfinite(Eq_hat) || ~isfinite(IF_sensorless_mode)
     Ed_hat=0; Eq_hat=0; IF_sensorless_mode=0;
@@ -31,23 +30,20 @@ if IF_sensorless_mode<0.5 || ~isfinite(Ed_hat+Eq_hat)
 end
 if state>0
     tick=tick+1;
-    % 采集确认在框图中明确延迟一拍，只有合格窗口才能推进采样状态。
+    % 调试版每个采样阶段固定0.6秒；不等待稳态、工作点或条件数验收。
+    % 确认口只保留非有限输入时的数值错误中止，不接受质量门限中止。
     if state>=2 && state<=8 && sample_ack<0
         state=10; tick=0;
     elseif state==5 && tick>7000
         state=6; tick=1;
         amp=min(0.6,max(0.2,0.01*abs(Eq_hat)));
-    elseif state>=2 && state<=8 && state~=5 && tick>=4000 && sample_ack==state
+    elseif state>=2 && state<=8 && state~=5 && tick>6000
         state=state+1; tick=1;
     end
     if state>=5 && state<=8, id_offset=-1.0; end
     if state==3 || state==7, injection=amp;
     elseif state==4 || state==8, injection=-amp;
     end
-end
-if abs(Eq_hat)<0.5, lowE=lowE+1; else, lowE=0; end
-if lowE>=200 && state>=2 && state<=8
-    state=10; tick=0; injection=0; id_offset=0;
 end
 vfl_state=int32(state);
 Ed_pll=Ed_hat+injection;
@@ -82,15 +78,9 @@ speed_i = min(max(speed_i,-we_max),we_max);
 % 外部一拍角度反馈和一拍速度反馈，避免代数环并保持采样对齐。
 theta = theta_z;
 theta_z = mod(theta_z+Ts*we,2*pi);
-% 无感控制持续稳定0.5秒后才开始实验；每段至少等待0.4秒及窗口确认。
+% 原有I/F切换至无感0.5秒后开始实验，不再增加相位、速度趋势验收。
 % 此处触发的状态转换从下一拍输出，保持注入与状态标记一致。
-a_arm=1-exp(-2*pi*50*Ts);
-phase_f=phase_f+a_arm*(phase_error-phase_f);
-phase2=phase2+a_arm*(phase_error*phase_error-phase2);
-speed_lp=speed_lp+a_arm*(we-speed_lp);
-speed_f=speed_f+0.002*(speed_lp-speed_f);
-if state==0 && IF_sensorless_mode>=0.5 && abs(speed_lp)>100 && ...
-        abs(speed_lp-speed_f)<2 && abs(phase_f)<0.03 && phase2<0.05^2 && abs(Eq_hat)>2
+if state==0 && IF_sensorless_mode>=0.5
     stable=stable+1;
     if stable>=5000
         state=2; tick=0; stable=0;

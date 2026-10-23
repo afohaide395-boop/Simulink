@@ -3,7 +3,9 @@ function [y,err1,err2] = identify_vbemf(ud,uq,id,iq,we,Vstate)
 % 论文式12.25～12.28：两组位置误差与逐样本递推最小二乘辨识。
 % 输入为五路同周期、同系数的50 Hz低通信号，采样周期均为100微秒。
 % 在辨识支路内对五路信号使用相同的一电周期滑动平均，抑制周期纹波。
-% y的前17列保持原含义；18～27列为电压稳态诊断，未计算参数为NaN。
+% 调试版：窗口填满即保存；稳态、工作点、角度及条件数仅提示，不阻断。
+% y(5)、y(7)表示数值计算完成，不代表已经通过精度或物理合理性验收。
+% y(17)保留首个诊断提示；18～27列为电压诊断，未计算参数为NaN。
 persistent buf count oldState ready result aerr berr finished
 persistent angleK angDone sumDiff m theta P iteration checked window cursor filled
 persistent cycleBuf cycleSum cycleHead cycleCount cycleN rawWindow
@@ -61,7 +63,7 @@ if slot>0 && ~ready(slot) && ~finished
     end
     result(26)=cycleN;
     % 至少等待0.2秒，并确保周期平均器已填满，再保存最新0.2秒窗口。
-    % 不能仅靠固定计时推进状态；窗口必须通过稳态及工作点匹配检查。
+    % 调试版不再等待窗口通过验收；窗口填满后即存储，PLL按固定时长推进。
     if count>max(2000,999+cycleN)
         cursor=mod(cursor,2000)+1; window(cursor,:)=smooth;
         rawWindow(cursor,:)=u(1:2);
@@ -71,39 +73,32 @@ if slot>0 && ~ready(slot) && ~finished
         W=zeros(2000,5);
         for n=1:2000, W(n,:)=window(mod(cursor+n-1,2000)+1,:); end
         [meanW,reason,drift,diagV]=check_window(W);
-        result(10)=drift; result(17)=reason;
+        result(10)=drift;
         rawMean=sum(rawWindow,1)/2000;
         for j=1:2
             result(17+j)=sqrt(sum((rawWindow(:,j)-rawMean(j)).^2)/2000);
         end
         result(20:25)=diagV;
-        if reason==0 && slot~=1 && slot~=4
+        if slot~=1 && slot~=4
             base=1+3*(slot>3);
             mismatch=norm(meanW(3:4)-m(base,3:4));
             result(11)=max(result(11),mismatch);
             if mismatch>max(0.02,0.005*norm(m(base,3:4))) || ...
                     abs(meanW(5)-m(base,5))>max(1,0.005*abs(m(base,5)))
-                reason=-6; result(17)=reason;
+                if reason==0, reason=-6; end
             end
         end
-        % 式12.25要求正负注入时的dq电流与转速相同，不能只检查各自平稳。
-        % 不匹配则继续滚动取窗，不使用错误的电压差计算位置误差。
-        if reason==0 && (slot==3 || slot==6)
+        % 正负窗口差异仅记录提示，按用户要求先输出实际数据的辨识曲线。
+        if slot==3 || slot==6
             plus=slot-1;
             if norm(meanW(3:4)-m(plus,3:4))>max(0.003,0.0005*norm(m(plus,3:4))) || ...
                     abs(meanW(5)-m(plus,5))>max(0.02,0.0001*abs(m(plus,5)))
-                reason=-12; result(17)=reason;
+                if reason==0, reason=-12; end
             end
         end
-        if reason==0
-            buf(:,:,slot)=W; m(slot,:)=meanW; ready(slot)=true;
-            result(16)=Vstate; result(17)=0;
-        end
-    end
-    % 同一工作点等待超过3秒仍不合格则明确中止，不使用被拒绝的数据。
-    if count>=30000 && ~ready(slot)
-        if result(17)==0, result(17)=-2; end
-        result(8)=result(17); result(16)=-Vstate; finished=true;
+        if result(17)==0 && reason~=0, result(17)=reason; end
+        buf(:,:,slot)=W; m(slot,:)=meanW; ready(slot)=true;
+        result(16)=Vstate;
     end
 end
 if Vstate==10 && ~finished
@@ -132,10 +127,10 @@ if Vstate==9 && ~finished
             angDone=true;
             for g=1:2
                 if norm(sumDiff(g,:))/2000<0.2 || abs(result(g))>0.6
-                    result(8)=-7; result(17)=-7; finished=true;
+                    if result(17)==0, result(17)=-7; end
                 end
             end
-            % 递推之前先检查两组数据的可观测性，此处不预先求解参数。
+            % 条件数仅用于诊断，不在此处预先求解参数，也不阻止递推。
             H=zeros(2,2);
             for g=1:2
                 b=1+3*(g-1); di=m(b,3); qi=m(b,4); w=m(b,5);
@@ -148,7 +143,7 @@ if Vstate==9 && ~finished
             condH=(tau+sqrt(max(0,tau*tau-4*detH*detH)))/(2*max(abs(detH),1e-12));
             result(9)=condH;
             if condH>100 || abs(detH)<1e-6
-                result(8)=-8; result(17)=-8; finished=true;
+                if result(17)==0, result(17)=-8; end
             end
         end
     else
@@ -170,7 +165,7 @@ if Vstate==9 && ~finished
         A=eye(2)-gain*phi'; P=A*P*A'+gain*gain'; P=0.5*(P+P');
         result(3)=0.01*theta(1); result(4)=0.2*theta(2);
         result(8)=3; result(12)=iteration; result(13)=innovation;
-        % 每次L和磁链递推后，同步更新当前Rs估计；最终有效性单独判断。
+        % 每次L和磁链递推后同步计算Rs，不因物理范围或相对门限隐藏结果。
         D=zeros(2,1); z=zeros(2,1);
         for h=1:2
             bb=1+3*(h-1); dd=m(bb,3); qq=m(bb,4); ww=m(bb,5);
@@ -180,19 +175,19 @@ if Vstate==9 && ~finished
         den=D(2)*m(1,4)-D(1)*m(4,4);
         rsScale=abs(D(2)*m(1,4))+abs(D(1)*m(4,4));
         result(14)=abs(den)/max(rsScale,1e-12);
-        rsObservable=rsScale>1e-6 && abs(den)>max(1e-3,0.003*rsScale);
-        if rsObservable, result(6)=(D(2)*z(1)-D(1)*z(2))/den; end
+        % 仅保留浮点除零保护；不可求时保留NaN，不用额定值代替结果。
+        canDivide=abs(den)>64*eps(max(rsScale,1));
+        if canDivide
+            result(6)=(D(2)*z(1)-D(1)*z(2))/den;
+        else
+            result(6)=NaN;
+        end
         if iteration==4000
             finished=true;
-            if all(isfinite(theta)) && result(3)>1e-5 && result(3)<0.2 && ...
-                    result(4)>1e-3 && result(4)<2
-                result(5)=1; result(8)=10;
-                if rsObservable && isfinite(result(6)) && result(6)>0 && result(6)<100
-                    result(7)=1; result(8)=20;
-                end
-            else
-                result(8)=-9; result(17)=-9;
-            end
+            result(5)=double(all(isfinite(theta)));
+            result(7)=double(isfinite(result(6)));
+            result(8)=30;
+            if result(7)==0 && result(17)==0, result(17)=-11; end
         end
     end
 end
@@ -200,7 +195,7 @@ y=result; err1=aerr; err2=berr;
 end
 
 function [meanW,reason,maxDrift,diagV] = check_window(W)
-% 电压均值漂移与周期平均后的剩余纹波分别判断，避免混用同一个错误码。
+% 仅计算诊断提示，不拒绝窗口、不超时中止、不抑制参数输出。
 % 原始纹波先经相同的电周期平均；慢漂移不会被此单位直流增益滤波消除。
 % 诊断六列依次为：ud/uq剩余标准差、ud/uq漂移门限比、ud/uq纹波门限比。
 meanW=sum(W,1)/2000; reason=0; maxDrift=0;
