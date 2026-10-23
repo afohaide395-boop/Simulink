@@ -1,13 +1,16 @@
-PASS ideal                L=0.00895955 psi=0.209987 R=1.86627 flags=1/1 status=20 iter=4000
-PASS inverter_error       L=0.00895955 psi=0.209987 R=1.86627 flags=1/1 status=20 iter=4000
-PASS noise                L=0.00896403 psi=0.210064 R=1.86659 flags=1/1 status=20 iter=4000
-PASS reverse_speed        L=0.00895955 psi=0.209987 R=1.86673 flags=1/1 status=20 iter=4000
-PASS rank_deficient       L=0 psi=0 R=0 flags=0/0 status=-8 iter=0
-PASS incomplete           L=0 psi=0 R=0 flags=0/0 status=-2 iter=0
-PASS current_drift        L=0 psi=0 R=0 flags=0/0 status=-6 iter=0
-PASS Rs_unobservable      L=0.00895955 psi=0.209988 R=0 flags=1/0 status=10 iter=4000
-PASS nonfinite            L=0 psi=0 R=0 flags=0/0 status=-1 iter=0
-PASS voltage_drift        L=0 psi=0 R=0 flags=0/0 status=-3 iter=0
-PASS ill_conditioned      L=0 psi=0 R=0 flags=0/0 status=-8 iter=0
-PASS PLL state sequence, seven 7000-tick stages, offset and reset
-PASS same-rate 100 us LPF + actual RLS: L=0.00895957 H psi=0.209987 Wb R=1.86625 ohm, iterations=4000
+PASS ideal                L=0.00895955 psi=0.209987 R=1.86627 status=20 wait=0 iter=4000
+PASS inverter_error       L=0.00895955 psi=0.209987 R=1.86627 status=20 wait=0 iter=4000
+PASS noise                L=0.00893903 psi=0.210027 R=1.79544 status=20 wait=0 iter=4000
+PASS reverse_speed        L=0.00895955 psi=0.209987 R=1.86673 status=20 wait=0 iter=4000
+PASS rank_deficient       L=NaN psi=NaN R=NaN status=-8 wait=-8 iter=0
+PASS incomplete           L=NaN psi=NaN R=NaN status=-2 wait=-2 iter=0
+PASS current_mismatch     L=NaN psi=NaN R=NaN status=-6 wait=-6 iter=0
+PASS Rs_unobservable      L=0.00895955 psi=0.209988 R=NaN status=10 wait=0 iter=4000
+PASS nonfinite            L=NaN psi=NaN R=NaN status=-1 wait=-1 iter=0
+PASS voltage_drift        L=NaN psi=NaN R=NaN status=-3 wait=-3 iter=0
+PASS ill_conditioned      L=NaN psi=NaN R=NaN status=-8 wait=-8 iter=0
+PASS delayed_settling     L=0.00895955 psi=0.209987 R=1.86627 status=20 wait=0 iter=4000
+PASS coupled actual PLL/collector handshake, 4000 updates, offset and mode reset
+PASS no ack keeps state2; rejected-window ack aborts to state10 and removes injection
+PASS +/- windows individually steady but speed/current unmatched: no false angle/RLS; explicit -12 timeout
+PASS same-rate 100 us LPF + actual RLS: L=0.00895958 H psi=0.20999 Wb R=1.86593 ohm, iterations=4000

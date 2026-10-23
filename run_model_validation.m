@@ -2,23 +2,24 @@ function report = run_model_validation
 % Full Simulink run. This requires MATLAB R2024b-compatible SPS libraries.
 folder=fileparts(mfilename('fullpath')); addpath(folder);
 test_identification;
+test_pair_matching;
 file=fullfile(folder,'reduce_emf_identified.slx'); [~,model]=fileparts(file);
 load_system(file); set_param(model,'SimulationCommand','update');
-out=sim(model,'StopTime','10','ReturnWorkspaceOutputs','on');
+out=sim(model,'StopTime','25','ReturnWorkspaceOutputs','on');
 r=out.get('param_identification'); st=out.get('identification_state');
 raw=out.get('id_raw'); filtered=out.get('id_filtered'); hold=out.get('id_iq_reference');
 y=squeeze(r.signals.values);
-if size(y,2)~=15 && size(y,1)==15, y=y.'; end
-assert(size(y,2)==15,'Unexpected result width.');
+if size(y,2)~=17 && size(y,1)==17, y=y.'; end
+assert(size(y,2)==17,'Unexpected result width.');
 % Save evidence BEFORE any assertion about convergence; failed runs are useful.
 save(fullfile(folder,'id_run_capture.mat'),'r','st','raw','filtered','hold');
 report=struct('Ls_H',y(end,3),'psi_Wb',y(end,4),'Rs_ohm',y(end,6), ...
     'valid_Lpsi',y(end,5),'valid_Rs',y(end,7), ...
     'deltaA_rad',y(end,1),'deltaB_rad',y(end,2),'status',y(end,8), ...
     'condition',y(end,9),'max_voltage_drift',y(end,10), ...
-    'max_current_mismatch',y(end,11),'RLS_iterations',y(end,12));
+    'max_current_mismatch',y(end,11),'RLS_iterations',y(end,12),'wait_reason',y(end,17));
 disp(report);
-figure('Name','VBEMF v2: actual RLS and filtered acquisition');
+figure('Name','VBEMF v5: actual RLS, accepted windows and filtered acquisition');
 subplot(4,1,1); plot(st.time,st.signals.values); ylabel('state'); grid on;
 subplot(4,1,2); plot(r.time,y(:,3)*1000); ylabel('Ls (mH)'); grid on;
 subplot(4,1,3); plot(r.time,y(:,4)); ylabel('psi (Wb)'); grid on;
@@ -27,7 +28,7 @@ figure('Name','ud/uq: raw versus prefiltered');
 for k=1:2
     subplot(2,1,k); plot(raw.time,raw.signals.values(:,k), ...
         filtered.time,filtered.signals.values(:,k));
-    legend('raw (recorded at Ts)','50 Hz before sampling'); grid on;
+    legend('raw (recorded at Ts)','50 Hz LPF at Ts'); grid on;
 end
 assert(any(st.signals.values(:)==9),'Sequence did not reach state 9.');
 assert(report.valid_Lpsi==1, 'L/psi rejected: inspect status and id_run_capture.mat.');

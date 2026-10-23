@@ -23,8 +23,8 @@ R=1.8665;L=.00896;psi=.21;w=220;states=[2,3,4,5,6,7,8]
 means=[]
 for state in states:
  g=int(state>4);di=[0,-1][g];qi=4;d=[.08,-.12][g]
- if state in [3,7]:d+=.07
- if state in [4,8]:d-=.07
+ if state in [3,7]:d+=.01
+ if state in [4,8]:d-=.01
  means.append([R*di-w*L*qi-w*psi*np.sin(d),R*qi+w*L*di+w*psi*np.cos(d),di,qi,w])
 per=7000;stages=np.repeat(np.arange(7),per);time=np.arange(len(stages))*Ts
 M=np.array(means);samples=np.empty((len(time),5))
