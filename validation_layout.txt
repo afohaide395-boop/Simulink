@@ -1,0 +1,4 @@
+12300 overlapping blocks: []
+12300 segments crossing other block interiors: 0
+12400 overlapping blocks: []
+12400 segments crossing other block interiors: 0

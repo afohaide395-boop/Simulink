@@ -1,5 +1,5 @@
 function test_pair_matching
-% Smooth +/- windows alone do not establish the subtraction assumptions.
+% 正负窗口各自平滑并不足以满足相减条件，还必须检验电流与转速匹配。
 folder=fileparts(mfilename('fullpath'));addpath(folder);
 for mode=1:2
     clear identify_vbemf

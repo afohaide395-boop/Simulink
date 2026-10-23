@@ -23,17 +23,15 @@ ki = wn*wn;                   % PI积分增益
 we_max = 1256;                % 原电角速度限幅，rad/s
 E_min = 1e-3;                 % 反电动势不足时不更新相位误差，V
 
-% State output and sample timing are shared with identify_vbemf.m.
-% Virtual voltage is added ONLY to Ed entering the PLL, never to plant voltage.
-% Existing I/F mode uses 1 for sensorless control.
+% 状态输出与采集函数共用同一控制周期；1表示已切换至无感控制。
+% 虚拟电压仅加到PLL使用的Ed，不直接叠加到电机电压命令。
 id_offset=0; injection=0;
 if IF_sensorless_mode<0.5 || ~isfinite(Ed_hat+Eq_hat)
     state=0; tick=0; stable=0;
 end
 if state>0
     tick=tick+1;
-    % Collector acknowledgement is delayed one control tick in the diagram.
-    % Only a validated 2000-sample window advances a measurement state.
+    % 采集确认在框图中明确延迟一拍，只有合格窗口才能推进采样状态。
     if state>=2 && state<=8 && sample_ack<0
         state=10; tick=0;
     elseif state==5 && tick>7000
@@ -84,8 +82,8 @@ speed_i = min(max(speed_i,-we_max),we_max);
 % 外部一拍角度反馈和一拍速度反馈，避免代数环并保持采样对齐。
 theta = theta_z;
 theta_z = mod(theta_z+Ts*we,2*pi);
-% Arm only after sensorless operation has remained settled for 0.5 s. Each stage waits for a valid window, minimum 0.4 s.
-% The state transition becomes visible next tick, keeping state and injection aligned.
+% 无感控制持续稳定0.5秒后才开始实验；每段至少等待0.4秒及窗口确认。
+% 此处触发的状态转换从下一拍输出，保持注入与状态标记一致。
 a_arm=1-exp(-2*pi*50*Ts);
 phase_f=phase_f+a_arm*(phase_error-phase_f);
 phase2=phase2+a_arm*(phase_error*phase_error-phase2);
@@ -101,5 +99,5 @@ if state==0 && IF_sensorless_mode>=0.5 && abs(speed_lp)>100 && ...
 elseif state==0
     stable=0;
 end
-% State 9 computes results; state 10 aborts. Both restore Id*=0 and injection=0.
+% 状态9计算结果、状态10中止实验，二者均恢复Id指令偏移和虚拟注入为0。
 end

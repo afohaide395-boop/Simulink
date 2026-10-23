@@ -1,5 +1,5 @@
 function test_identification
-% Actual MATLAB functions; synthetic equations are NOT switched-model tests.
+% 执行实际交付的MATLAB函数；合成方程测试不等于开关电机整机仿真。
 folder=fileparts(mfilename('fullpath')); addpath(folder); rng(42);
 R=1.8665;L=.00896;psi=.21;
 names={'ideal','inverter_error','noise','reverse_speed','rank_deficient', ...
@@ -69,10 +69,10 @@ for c=1:numel(names)
     end
     fprintf('PASS %-20s L=%g psi=%g R=%g status=%g wait=%g iter=%g\n',names{c},y(3),y(4),y(6),y(8),y(17),y(12));
 end
-% Actual PLL + collector, linked by the same one-tick ack as in the model.
+% 将实际PLL与采集器按模型中的一拍确认相连，验证状态配合及递推过程。
 clear pll_vbemf identify_vbemf
 Ts=1e-4;W=220;E=46.2;th=0;ack=0;
-seen=false(11,1);ticks=zeros(11,1);final=zeros(17,1);
+seen=false(11,1);ticks=zeros(11,1);final=zeros(27,1);
 for n=1:100000
     t=(n-1)*Ts;delta=W*t-th;
     [theta,speed,offset,state]=pll_vbemf(-E*sin(delta),E*cos(delta),double(t>=1),ack);
@@ -88,7 +88,7 @@ assert(all(seen([1 3:10])) && ~seen(11),'Handshake phase sequence failed');
 assert(all(ticks(3:9)>=4000));assert(final(5)==1 && final(12)==4000);
 [~,~,off,state]=pll_vbemf(0,E,0,0);assert(state==0 && off==0);
 fprintf('PASS coupled actual PLL/collector handshake, 4000 updates, offset and mode reset\n');
-% A timer without a valid-window ack MUST NOT step to positive injection.
+% 没有合格窗口确认时，不允许仅靠计时进入正注入阶段。
 clear pll_vbemf
 th=0;
 for n=1:40000

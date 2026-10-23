@@ -1,6 +1,5 @@
-"""Evaluate the iq selector on the serialized Simulink graph, including nested
-ports and Goto/From. This catches a disconnected speed-PI output that scalar
-RLS unit tests cannot detect. It is not a motor/Simulink simulation."""
+"""直接读取SLX信号图，解析嵌套端口与Goto/From，核对iq指令来源。
+用于检出速度PI断接或自回接，不能替代电机或Simulink整机仿真。"""
 from pathlib import Path
 import argparse,io,subprocess,zipfile,xml.etree.ElementTree as E
 
@@ -61,8 +60,7 @@ def check(content):
                 got=graph.evaluate('12010#out:1',values)
                 expected=7.0 if mode==0 else (3.7 if hold else speed)
                 assert abs(got-expected)<1e-12,(mode,hold,speed,got,expected)
-    # The filtered regressor must consume the intended five channels, not raw
-    # or crossed d/q data. Follow both named signal aliases on each channel.
+    # 沿两层信号标签逐路追踪，确认辨识输入为预期的五路低通信号，避免dq错接。
     for i,name in enumerate(['ud_raw','uq_raw','id_raw','iq_raw','we_raw']):
         chartsrc=graph.inputs[f'12088#in:{i+1}'];sid=chartsrc.split('#')[0]
         assert graph.prop(graph.blocks[sid],'GotoTag')=='PID_'+name+'_f'

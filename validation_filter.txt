@@ -1,0 +1,6 @@
+LPF at Ts=100us:    0 Hz gain=1.000000000 (-0.00 dB)
+LPF at Ts=100us:   50 Hz gain=0.707106781 (-3.01 dB)
+LPF at Ts=100us:  200 Hz gain=0.062225010 (-24.12 dB)
+LPF at Ts=100us: 3000 Hz gain=0.000130267 (-77.70 dB)
+PASS limitation: 10kHz already aliased to DC at the source remains DC after this filter
+PASS generated same-rate LPF fixture for actual RLS integration test

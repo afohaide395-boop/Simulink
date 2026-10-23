@@ -1,4 +1,4 @@
-"""Model inputs already update at Ts: test exactly that same-rate filter chain."""
+"""模型源信号已按Ts更新；验证实际同速率低通，并生成集成测试输入。"""
 from pathlib import Path
 import numpy as np
 from scipy import signal,io
@@ -12,13 +12,13 @@ for f in [0,50,200,3000]:
  if f==0:assert abs(abs(h[0])-1)<1e-10
  if f==50:assert abs(abs(h[0])-2**-.5)<1e-8
  if f==200:assert abs(h[0])<.063
-# This test guards against claiming that already aliased PWM is removable.
+# 已在源端混叠为直流的载波无法由后续低通恢复，此测试明确验证这个限制。
 t=np.arange(10000)*Ts
 aliased=np.cos(2*np.pi*10000*t)
 y=signal.lfilter(b,a,aliased)
 assert abs(np.mean(y[-2000:])-1)<1e-8
 print('PASS limitation: 10kHz already aliased to DC at the source remains DC after this filter')
-# Same-rate sampled channels with resolvable 6fe ripple.
+# 生成含可分辨六倍电频纹波的五路同速率数据。
 R=1.8665;L=.00896;psi=.21;w=220;states=[2,3,4,5,6,7,8]
 means=[]
 for state in states:

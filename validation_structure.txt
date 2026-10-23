@@ -1,5 +1,5 @@
 PASS top-level panel grouping: 179 -> 149 blocks, five filters/monitors inside dedicated subsystem
 PASS all five actual source/LPF/RLS interfaces use 100us; filter coefficients retuned to Ts, redundant holds removed
 PASS XML, block IDs, line endpoints, unique drivers, moved subsystem relationships and Stateflow instance path
-PASS new local/global tags resolve; RLS arithmetic unchanged; acquisition point-to-point routes and remaining branch trunk metadata valid; MATLAB syntax parsing and four-input acknowledgement wrapper metadata
-PASS solver/multitasking/rate-transition diagnostics configuration unchanged (only StopTime extended; rate errors remain enabled)
+PASS new local/global tags resolve; RLS arithmetic unchanged; acquisition point-to-point routes and branch metadata valid; MATLAB syntax parsing and four-input acknowledgement wrapper metadata
+PASS v6 vs v5: control/electrical/solver/task settings unchanged; only identification, diagnostic displays and Chinese comments updated; result width 27

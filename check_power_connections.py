@@ -1,7 +1,6 @@
-"""Verify the physical power circuit against the known-good original checkout.
-
-Run from this repository: python check_power_connections.py
-No MATLAB required. This is a topology/wiring regression check, not a simulation.
+"""将物理电气网络与原模型逐项对照，防止整理信号线时误删电源回路。
+在仓库运行python check_power_connections.py，无需MATLAB。
+此检查仅验证拓扑及接线，不代表电机整机仿真已经通过。
 """
 from pathlib import Path
 from collections import Counter
@@ -25,8 +24,7 @@ def physical_lines(root):
 def physical_nets(root):
     nets=[]
     for line in physical_lines(root):
-        # Electrical branches may use Src on EVERY endpoint, with no Dst.
-        # Their validity must never be inferred using signal-line semantics.
+        # 电气线可能在所有端点均使用Src而没有Dst，不能按普通信号线规则删线。
         endpoints={p.text for p in line.iter('P') if p.get('Name') in ['Src','Dst']
                    and p.text and ('#lconn:' in p.text or '#rconn:' in p.text)}
         assert len(endpoints)>=2,'Dangling physical connection'
