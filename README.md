@@ -1,65 +1,72 @@
-# 参数辨识与无感控制 v11：功能模块整理
+# 参数辨识与无感控制 v12：端口与接线复查
 
-推荐打开 **[reduce_emf_organized.slx](reduce_emf_organized.slx)**。所有算法代码均已嵌入SLX，直接运行不依赖外部`.m`文件；需要与原模型兼容的MATLAB R2024b、Simulink及Specialized Power Systems。
+交付文件：**[reduce_emf_checked_package.zip](reduce_emf_checked_package.zip)**。
+单独模型为 **[reduce_emf_checked.slx](reduce_emf_checked.slx)**，算法均嵌入SLX。
+需要与原模型兼容的MATLAB R2024b、Simulink及Specialized Power Systems。
 
-本版基于v10整理层次和接线。顶层从149个模块收拢为21个模块，功能入口如下。
+本版针对“电流采样与矢量控制”“反电动势观测与锁相环”“运行监测”被报告的断线，补上端口完整性及显式线段检查。上一版仅展开信号来源并比较，不能证明Simulink加载后每条线都附着到真实端口，也漏掉了悬空端口与斜线。
 
-| 顶层子系统 | 包含内容 |
-|---|---|
-| 反电动势观测与锁相环 | 原反电动势观测器、PLL、Ed/Eq监测、原角度反馈/转速/Id偏移延迟、估计转速单位转换 |
-| 电流采样与矢量控制 | 电机测量总线、电流采样、Clarke/Park变换、d/q电流环、逆Park变换、SVPWM及电压监测 |
-| 启动与速度控制 | 原I/F启动、转速参考、速度环、iq指令选择、控制角度选择和辨识保持逻辑 |
-| 参数辨识与采集 | v10的中文注释、具名变量、独立命名输出，以及原滤波、采样、显示和日志 |
-| 运行监测 | 三相电流、转矩、转速、角度及I/F/PLL切换监测；原备用子系统一并保留 |
+## 本次修正
 
-双击相应子系统即可查看原模块。电源、逆变桥、电机和powergui仍在顶层，物理电气连接的分支结构全部保留。
+- 为整理图中的Goto/From明确写入输入/输出端口数。
+- 八个可见图的300条普通信号线都写入明确折点及线层次，不依靠省略几何信息自动显示。
+- 对齐I/F输入常量和参数辨识电压诊断入口，消除离线发现的斜线。
+- 原电机负载转矩输入悬空，本版显式接Ground（0），保持原来的零外加负载。原来未使用的8.5Nm阶跃没有接入电机。
+- 原停用子系统和未使用阶跃移至“备用模型_已停用”，补齐备用端口终结，不在运行监测图中显示孤立端口。
+- PI、PLL、辨识函数、原延迟、采样周期及五组物理电气连接树保留。
 
-## 接线整理
+顶层仍按启动与速度控制、电流采样与矢量控制、反电动势观测与锁相环、参数辨识与采集、运行监测组织。
 
-- 短的顺向连接保持直接接线；跨模块信号、反馈线和监测分支使用Goto/From。
-- 原来只在顶层有效的局部标签，连同对应From一起改为带`CTRL_`前缀的全局标签，避免移入子系统后失效。
-- 子系统内部新增的Ed/Eq、采样机械速度等路由使用局部标签；电机测量总线通过`LINK_Motor_measurements`传入电流采样模块。
-- Goto/From隐藏通用模块名，只显示信号标签，减少标注拥挤。
-- 新增四个子系统均为虚拟子系统。原计算模块、延迟、采样周期、PI参数、PLL算法及参数辨识代码保留。
+## MATLAB内原生重连与编译
 
-观测器角度反馈仍为：**原PLL角度 → 原“PLL角度反馈延迟” → 观测器**。Goto/From不引入延迟，也不替代原延迟。PWM脉冲及辨识确认的时序同样沿用v10。
+**云端没有MATLAB/Simulink。当前完成的是离线检查，尚不能声称已通过真实SLX编译，也不能确认用户所见的所有界面断线都已消失。**
 
-参数辨识代码入口仍为：**参数辨识与采集 → 参数辨识算法 → 参数辨识**。独立输出和31列兼容日志的说明见 [v10代码整理说明](docs/readable_v10.md)。
+包内的 [repair_organized_wires.m](repair_organized_wires.m) 不根据模块矩形猜测端点。它在MATLAB中读取真实`PortHandles`，重建清单对应的普通信号线、使用实际端口坐标设置水平/竖直折线，再检查端口附着和编译。这是进一步排除加载/显示连接问题的本机步骤，云端未执行此脚本。
 
-## 已验证与边界
+将压缩包解压到同一目录，在MATLAB该目录运行：
 
-- 展开Goto/From及所有虚拟层次后，逐路比较了**478个原计算输入**，实际信号来源与v10完全一致。
-- 所有原计算参数及现有子系统正文保持一致；七个Stateflow图的算法代码及配置保留，只同步移动后的图路径。
-- 五组物理电气连接树及直流负端回路与v10一致；检查了PWM、观测器反馈及辨识采样确认。
-- 原速度控制与I/F接线回归通过，速度PI继续调节iq，辨识保持使能继续为0。
-- 故障回归能检出人为绕过观测器反馈延迟、PWM误接转速信号及跨模块状态标签未导出。
-- 顶层及四个新子系统没有模块重叠或信号线穿过其他模块。物理电气线的拓扑由独立结构检查验证。
-
-当前环境没有MATLAB/Simulink，尚未执行SLX实际编译或电机整机仿真。本次保留算法，不据静态检查宣称整机仿真已经通过。
-
-## 复查与重建
-
-```text
-python check_organized_model.py --self-test
-python check_control_path.py --model reduce_emf_organized.slx --self-test
-python check_speed_control.py --model reduce_emf_organized.slx
-python check_organized_layout.py
+```matlab
+report = repair_organized_wires;
 ```
 
-布局检查可加`--output-dir <目录>`生成几何预览图；该预览不是Simulink实际截图。检查记录位于`validation_organized_*.txt`。
+只有300条连接、全部受检活动端口、折线和Simulink更新编译都通过，才保存：
+
+- `reduce_emf_checked_native.slx`：由Simulink原生接口重接并编译后的模型。
+- `native_wiring_report.mat`：实际本机检查结果。
+
+下载的SLX保留，脚本不覆盖它。脚本不会修改物理电气连接或执行整机仿真。若模型已有未保存修改，脚本会停止，避免丢失用户工作。源码已通过MATLAB语法解析，实际MATLAB运行仍待本机执行。
+
+## 离线检查证据
+
+`python check_checked_model.py --self-test` 验证：
+
+- 八个可见图的300条显式接线，按模块类型/端口元数据逐个检查活动输入和输出，不用“已经出现在线上”的数量反推应有端口数。
+- 所检图中没有斜线、重叠模块或信号线穿过其他模块。
+- 730个原输入定义的信号来源保留；原悬空输入与新增Ground均按零信号处理，实际电机负载输入明确接零。
+- Goto/From唯一解析，SID和子系统关系有效，Stateflow算法及配置保留，物理电气连接树保留。
+- 人为删除Park输入线、人为插入斜线时，检查必须失败。
+
+这些结论仅涵盖指定可见图和序列化文件，不能替代真实端口检查或整机仿真。
 
 ```text
-python build_organized.py
+python build_checked.py
+python check_checked_model.py --self-test
+python check_checked_layout.py
+python check_control_path.py --model reduce_emf_checked.slx --self-test
+python check_speed_control.py --model reduce_emf_checked.slx
 ```
 
-从`tests/fixtures/reduce_emf_readable_v10.slx`重建本版。新文件名为`reduce_emf_organized.slx`；现有`build_readable.py`等命令继续对应v10，旧版文件用于对照。
+`build_checked.py`从v11快照重建模型及接线清单；`package_checked.py`生成交付包。
+验证记录见`validation_checked_*.txt`。前一版说明保存在 [docs/organized_v11.md](docs/organized_v11.md)。
 
-在MATLAB中可直接打开新SLX运行；如需编译、25秒整机仿真及记录，运行：
+## 算法与仿真
+
+参数辨识仍位于“参数辨识与采集 → 参数辨识算法 → 参数辨识”，保留中文注释及电感、磁链、电阻等独立命名输出。原31列日志兼容。
+
+原生重连和编译通过后，可在完整仓库运行：
 
 ```matlab
 report = run_model_validation;
 ```
 
-验证脚本优先选择`reduce_emf_organized.slx`。`param_identification`、`id_raw`、`id_filtered`、`identification_state`和`id_iq_reference`的日志格式沿用v10，`diagnose_identification`可继续使用。
-
-v9算法说明保存在 [docs/algorithm_v9.md](docs/algorithm_v9.md)。
+它优先选择`reduce_emf_checked_native.slx`，执行原有函数回归及25秒整机仿真并保存记录。云端本次没有运行此步骤。
