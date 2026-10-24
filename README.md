@@ -67,3 +67,21 @@ python check_power_connections.py --self-test
 后两项的历史错误自测需要仓库 Git 历史。独立函数测试可运行 `test_speedloop_sequence; test_identification`。
 
 `python build_speedloop.py` 可使用上传原件备份及 `pll_vbemf.m` 重建两个交付文件，无需 MATLAB。最终整机编译和仿真仍需要 MATLAB/SPS。
+
+## 精度诊断：回放六段真实采样
+
+若电机已正常运行，但电感、磁链或电阻仍有偏差，可在本次仿真结束后运行：
+
+```matlab
+report = diagnose_identification;
+```
+
+将 `diagnose_identification.m` 放在当前 MATLAB 文件夹或搜索路径中即可。脚本自动读取工作区的 `id_filtered`、`identification_state`、`param_identification`；也支持工作区 `out` 或选择已有采样 MAT 文件。已有 `id_run_capture.mat` 可以使用 `diagnose_identification('id_run_capture.mat')`。
+
+该脚本不加载或修改模型、不更改参数估计，也不清空工作区。它依据各阶段实际采样完成时间和周期平均长度，重建原辨识器真正保存的六个2000点窗口，导出 `identification_diagnosis.mat`。文件只含这六段窗口、最终结果和诊断摘要，窗口数组未压缩约0.48 MB，便于传回分析。
+
+摘要包含：六段电压/电流/转速均值，正负注入段的实际电流及转速差，原角度差分重放、仅速度归一化的角度对比，实际归一化RLS的解析重放、移除初始协方差影响的对照，以及两组角度误差对L/磁链的局部灵敏度。归一化角度对比尚未补偿电流项，只用于诊断，不作为新的估计结果。
+
+当前速度闭环会调节iq，而论文式12.25的直接电压差分依赖正负段dq电流一致。不能仅凭最终L、磁链、角度和Rs几个数确定实际偏差来源；应先用六段记录区分电流/速度变化、采样时段和求解影响，再验证精度修改。诊断中的解析求解只用于核对原RLS，不替代模型的逐样本递推。
+
+`test_diagnose_identification` 使用实际交付的辨识函数生成带噪记录，验证正转、低速周期平均上限和反转三种情况下的窗口及参数重建；误差小于1e-8。当前已执行GNU Octave函数测试及MATLAB语法解析，未执行MATLAB整机仿真。
