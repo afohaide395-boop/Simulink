@@ -1,5 +1,5 @@
-PASS top-level panel grouping: 179 -> 149 blocks, five filters/monitors inside dedicated subsystem
-PASS all five actual source/LPF/RLS interfaces use 100us; filter coefficients retuned to Ts, redundant holds removed
-PASS XML, block IDs, line endpoints, unique drivers, moved subsystem relationships and Stateflow instance path
-PASS new local/global tags resolve; RLS arithmetic unchanged; acquisition point-to-point routes and branch metadata valid; MATLAB syntax parsing and four-input acknowledgement wrapper metadata
-PASS v7 vs v6: all wiring/layout/electrical/solver/task settings unchanged; PLL PI/angle integration unchanged; only identification gates, experiment timing and explanatory text updated
+PASS 仅改上传原件的3个资源：统一保持使能、Id斜坡/恢复时序、已有说明
+PASS 所有模块位置、外部连线、端口、分支、电气网络和求解器配置与上传原件一致
+PASS 速度PI本体及PLL的PI/角度积分不变；辨识器、滤波、无门限输出及27列结果保留
+PASS SLX归档/XML完整、SID唯一、端点有效且无重复驱动；内嵌代码与交付源码一致
+PASS MATLAB算法及验证脚本语法解析无错误。

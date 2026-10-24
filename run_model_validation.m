@@ -5,7 +5,10 @@ test_identification;
 test_pair_matching;
 test_voltage_ripple;
 test_preview_outputs;
-file=fullfile(folder,'reduce_emf_identified.slx'); [~,model]=fileparts(file);
+test_speedloop_sequence;
+file=fullfile(folder,'reduce_emf_speedloop.slx');
+if ~isfile(file),file=fullfile(folder,'reduce_emf_identified.slx');end
+[~,model]=fileparts(file);
 load_system(file); set_param(model,'SimulationCommand','update');
 out=sim(model,'StopTime','25','ReturnWorkspaceOutputs','on');
 r=out.get('param_identification'); st=out.get('identification_state');
@@ -26,7 +29,7 @@ report=struct('Ls_H',y(end,3),'psi_Wb',y(end,4),'Rs_ohm',y(end,6), ...
     'voltage_ripple_limit_ratio',y(end,24:25),'cycle_samples',y(end,26), ...
     'last_sampling_stage',y(end,27));
 disp(report);
-figure('Name','虚拟反电动势辨识v7：实际参数曲线，不按质量门限阻断');
+figure('Name','虚拟反电动势辨识v8：速度PI持续调节与实际参数曲线');
 subplot(4,1,1); plot(st.time,st.signals.values); ylabel('state'); grid on;
 subplot(4,1,2); plot(r.time,y(:,3)*1000); ylabel('Ls (mH)'); grid on;
 subplot(4,1,3); plot(r.time,y(:,4)); ylabel('psi (Wb)'); grid on;
@@ -52,9 +55,21 @@ for state=[2 3 4 6 7 8]
     assert(~isempty(ts),'Missing acquisition state.');
     ix=iqReference.time>=ts(1)+0.01 & iqReference.time<=ts(end)-0.01;
     hh=iqReference.signals.values(ix,:);
-    assert(all(hh(:,3)>.5) && max(hh(:,2))-min(hh(:,2))<1e-8, ...
-        'Iq reference was not held constant during the acquisition triplet.');
+    assert(all(abs(hh(:,3))<1e-12), '辨识期间保持使能应始终为0。');
+    assert(max(abs(hh(:,2)-hh(:,1)))<1e-8, ...
+        'iq指令没有持续跟随速度PI输出。');
 end
+% 给出每段后0.2秒的速度变化，便于与旧版的转速上拱作对比；只记录不设门限。
+report.stage_speed_stats=zeros(6,4);
+stages=[2 3 4 6 7 8];
+for k=1:numel(stages)
+    times=st.time(st.signals.values(:)==stages(k));
+    ix=filtered.time>=times(end)-.2 & filtered.time<=times(end);
+    w=filtered.signals.values(ix,5);
+    report.stage_speed_stats(k,:)=[stages(k),mean(w),min(w),max(w)];
+end
+disp('各段后0.2秒的速度统计：[阶段，we均值，we最小，we最大]，单位rad/s');
+disp(report.stage_speed_stats);
 % 误差只列入报告，不再以接近额定值作为保留结果或完成仿真的条件。
 report.reference_error_fraction=[report.Ls_H/.00896-1,report.psi_Wb/.21-1,report.Rs_ohm/1.8665-1];
 disp(report.reference_error_fraction);

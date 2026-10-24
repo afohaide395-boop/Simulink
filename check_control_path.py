@@ -69,12 +69,12 @@ def check(content):
         assert graph.prop(graph.blocks[fs],'GotoTag')=='PID_'+name
         rt=graph.goto_for(fs);assert graph.inputs[rt+'#in:1']==f'{12310+i}#out:1'
     assert graph.inputs['12560#in:1']=='12096#out:9'
-    assert graph.prop(graph.blocks['12560'],'SampleTime')=='Ts' and graph.prop(graph.blocks['12560'],'InitialCondition')=='0'
+    assert graph.prop(graph.blocks['12560'],'SampleTime')=='Ts' and graph.prop(graph.blocks['12560'],'InitialCondition','0')=='0'
     assert graph.inputs['12561#in:1']=='12560#out:1'
     assert graph.goto_for('12580')=='12561'
     assert graph.inputs['12073#in:4']=='12580#out:1'
     assert graph.inputs['12073::32#in:4']=='12073::38#out:1'
-    print('PASS serialized control graph: I/F selects 7A; sensorless follows speed PI; hold selects memory; release follows PI again')
+    print('PASS iq选择器及I/F连接正确；实际保持使能关闭由check_speed_control.py逐拍核对')
     print('PASS 五路低通映射正确；采样完成/数值错误反馈经一拍Ts延迟到PLL输入4，不作质量验收')
 
 def main():

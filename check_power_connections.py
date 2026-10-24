@@ -57,16 +57,20 @@ def git_model(repo,commit):
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--model',type=Path)
     ap.add_argument('--repo',type=Path,default=Path(__file__).resolve().parent)
+    ap.add_argument('--reference',type=Path)
     ap.add_argument('--self-test',action='store_true');args=ap.parse_args()
     model=args.model or args.repo/'reduce_emf_identified.slx'
-    reference=root_from_bytes(git_model(args.repo,ORIGINAL_COMMIT))
+    uploaded=args.repo/'tests/fixtures/reduce_emf_before_speedloop.slx'
+    reference_path=args.reference or (uploaded if uploaded.exists() else None)
+    reference=root_from_bytes(reference_path.read_bytes() if reference_path else git_model(args.repo,ORIGINAL_COMMIT))
     check_circuit(root_from_bytes(model.read_bytes()),reference)
     print('PASS all 5 original physical connection trees and nets, including Src-only DC-negative/ground branch')
     print('PASS power source, bridge, ground, motor, powergui and I/F startup block parameters preserved')
     print('PASS I/F iq source, selector control and selected-iq command signal connections')
     if args.self_test:
         bad=root_from_bytes(git_model(args.repo,BROKEN_COMMIT))
-        try:check_circuit(bad,reference)
+        try:
+            assert physical_nets(bad)==physical_nets(reference),'原DC负端缺失'
         except AssertionError:print('PASS regression: test rejects the previous model with the missing DC return')
         else:raise AssertionError('Test failed to reject the known broken model')
     print('Electrical/mechanical startup has NOT been simulated by this Python check.')

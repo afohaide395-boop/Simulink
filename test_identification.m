@@ -85,7 +85,8 @@ for n=1:100000
     t=(n-1)*Ts;delta=W*t-th;
     [theta,speed,offset,state]=pll_vbemf(-E*sin(delta),E*cos(delta),double(t>=1),ack);
     th=mod(theta+Ts*speed,2*pi);seen(double(state)+1)=true;ticks(double(state)+1)=ticks(double(state)+1)+1;
-    if state>=5 && state<=8,assert(offset==-1);else,assert(offset==0);end
+    if state>=6 && state<=8,assert(offset==-1);end
+    if state==0 || (state>=2 && state<=4),assert(offset==0);end
     group=1+(state>=5 && state<=8);di=[0 -1];d0=[.08 -.12];shift=0;
     if state==3 || state==7,shift=.01;elseif state==4 || state==8,shift=-.01;end
     d=d0(group)+shift;dd=di(group);qq=4;
@@ -94,6 +95,7 @@ for n=1:100000
 end
 assert(all(seen([1 3:10])) && ~seen(11),'Handshake phase sequence failed');
 assert(all(ticks(3:9)>=6000));assert(final(5)==1 && final(12)==4000 && final(8)==30);
+assert(ticks(6)==10000,'Id切换恢复段应为1秒。');
 [~,~,off,state]=pll_vbemf(0,E,0,0);assert(state==0 && off==0);
 fprintf('PASS 固定时序PLL与实际采集器联动，4000次更新、Id偏移及模式复位\n');
 % 没有质量确认也应按固定时长推进，不再把用户卡在某个采样阶段。

@@ -3,14 +3,14 @@ function [theta,we,id_offset,vfl_state] = pll_vbemf(Ed_hat,Eq_hat,IF_sensorless_
 %==================================================
 % 文档式(12.7)、图12.2：反电动势相位误差 -> PI -> 角度积分。
 % Ed_hat、eb端口现在分别接Ed_hat、Eq_hat，单位V，不再接磁链。
-% 加入文献12.4.1的虚拟反电动势注入与六段采样状态机。
+% 虚拟反电动势注入与六段采样；Id切入退出用100毫秒斜坡。
 % 保留原有I/F切换输入及四路输出，外围控制连接保持完整。
 %==================================================
-persistent theta_z speed_i state tick stable amp
+persistent theta_z speed_i state tick stable amp id_ramp
 if isempty(theta_z)
     theta_z = 0;
     speed_i = 0;
-    state=0; tick=0; stable=0; amp=0;
+    state=0; tick=0; stable=0; amp=0; id_ramp=0;
 end
 if ~isfinite(Ed_hat) || ~isfinite(Eq_hat) || ~isfinite(IF_sensorless_mode)
     Ed_hat=0; Eq_hat=0; IF_sensorless_mode=0;
@@ -34,7 +34,8 @@ if state>0
     % 确认口只保留非有限输入时的数值错误中止，不接受质量门限中止。
     if state>=2 && state<=8 && sample_ack<0
         state=10; tick=0;
-    elseif state==5 && tick>7000
+    % 工作点切换共1秒，包含100毫秒Id斜坡和900毫秒恢复时间。
+    elseif state==5 && tick>10000
         state=6; tick=1;
         amp=min(0.6,max(0.2,0.01*abs(Eq_hat)));
     elseif state>=2 && state<=8 && state~=5 && tick>6000
@@ -45,6 +46,15 @@ if state>0
     elseif state==4 || state==8, injection=-amp;
     end
 end
+% 正常实验时Id偏移按10 A/s变化，沿用100微秒控制周期。
+% I/F复位或数值错误中止时立即清零，不延迟原有复位动作。
+if IF_sensorless_mode<0.5 || state==10
+    id_ramp=0;
+else
+    id_step=10*Ts;
+    id_ramp=id_ramp+min(max(id_offset-id_ramp,-id_step),id_step);
+end
+id_offset=id_ramp;
 vfl_state=int32(state);
 Ed_pll=Ed_hat+injection;
 
@@ -89,5 +99,5 @@ if state==0 && IF_sensorless_mode>=0.5
 elseif state==0
     stable=0;
 end
-% 状态9计算结果、状态10中止实验，二者均恢复Id指令偏移和虚拟注入为0。
+% 状态9计算结果并将Id偏移斜坡恢复为0；状态10立即中止并清零。
 end
