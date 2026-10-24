@@ -1,0 +1,5 @@
+PASS v9控制环、PLL/I/F、所有电气连接、滤波及求解器保留；仅重构辨识代码与接口
+PASS 6输入、31标量及2组400点角度历史：源码、Stateflow及底层端口元数据一致
+PASS 独立命名输出、参数显示、31列兼容日志及辨识Goto/From映射正确
+PASS SLX/XML完整、SID唯一、端点有效、驱动唯一、子系统关系完整
+PASS 15个MATLAB文件语法解析通过；当前环境无MATLAB/Simulink，未执行SLX编译或整机仿真。

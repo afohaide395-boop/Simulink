@@ -3,14 +3,14 @@ function test_pipeline
 % 验证低通、周期平均及实际RLS函数的衔接，不替代Simulink整机仿真。
 folder=fileparts(mfilename('fullpath')); addpath(folder);
 f=load(fullfile(folder,'pipeline_fixture.mat')); clear identify_vbemf;
-identify_vbemf(0,0,0,0,0,0);
+record_identification(0,0,0,0,0,0);
 for n=1:size(f.samples,1)
     u=f.samples(n,:);
-    identify_vbemf(u(1),u(2),u(3),u(4),u(5),f.states(n));
+    record_identification(u(1),u(2),u(3),u(4),u(5),f.states(n));
 end
 trace=zeros(4401,5);
 for n=1:4401
-    [y,~,~]=identify_vbemf(0,0,0,0,220,9);
+    [y,~,~]=record_identification(0,0,0,0,220,9);
     trace(n,:)=[y(3) y(4) y(6) y(12) y(13)];
 end
 assert(y(5)==1 && y(7)==1 && y(12)==4000);

@@ -13,7 +13,7 @@ for c=1:numel(names)
     if c==5,ids=[0 0];deltas=[.08 .08];end
     if c==8,iqs(2)=sqrt(15);end
     if c==11,ids=[0 -1e-6];deltas=[.08 .08];end
-    y=identify_vbemf(0,0,0,0,w,0);
+    y=record_identification(0,0,0,0,w,0);
     assert(all(isnan(y([3 4 6]))),'Uncomputed estimates must not be valid zeros');
     states=[2 3 4 6 7 8];failed=false;
     for s=1:6
@@ -31,7 +31,7 @@ for c=1:numel(names)
             if c==3,u=u+[.01*randn .01*randn .001*randn .001*randn .03*randn];end
             if c==10 && s==1,u(1)=u(1)+.001*n;end
             if c==12 && s==1 && n>2000 && n<=3000,u(1)=u(1)+1;end
-            y=identify_vbemf(u(1),u(2),u(3),u(4),u(5),states(s));
+            y=record_identification(u(1),u(2),u(3),u(4),u(5),states(s));
             if y(16)==states(s),accepted=n;break;end
             if y(16)<0,failed=true;break;end
         end
@@ -39,12 +39,12 @@ for c=1:numel(names)
         assert(accepted==6000,'应保存每段最后0.2秒窗口，且不因诊断门限等待。');
     end
     if c==9
-        y=identify_vbemf(NaN,0,0,0,w,8);failed=true;
+        y=record_identification(NaN,0,0,0,w,8);failed=true;
     end
     if ~failed
         history=zeros(4401,3);
         for n=1:4401
-            [y,e1,e2]=identify_vbemf(0,0,0,0,w,9);
+            [y,e1,e2]=record_identification(0,0,0,0,w,9);
             history(n,:)=[y(3) y(4) y(12)];
         end
         assert(numel(e1)==400 && numel(e2)==400);
@@ -92,7 +92,7 @@ for n=1:100000
     if state==3 || state==7,shift=.01;elseif state==4 || state==8,shift=-.01;end
     d=d0(group)+shift;dd=di(group);qq=4;
     ud=R*dd-W*L*qq-W*psi*sin(d);uq=R*qq+W*L*dd+W*psi*cos(d);
-    final=identify_vbemf(ud,uq,dd,qq,W,double(state));ack=final(16);
+    final=record_identification(ud,uq,dd,qq,W,double(state));ack=final(16);
 end
 assert(all(seen([1 3:10])) && ~seen(11),'Handshake phase sequence failed');
 assert(all(ticks(3:9)>=6000));assert(final(5)==1 && final(12)==4000 && final(8)==30);

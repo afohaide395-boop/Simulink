@@ -8,11 +8,11 @@ for k=1:numel(names)
     clear identify_vbemf
     f=load(fullfile(folder,[names{k} '_fixture.mat']));
     for n=1:size(f.samples,1)
-        u=f.samples(n,:);y=identify_vbemf(u(1),u(2),u(3),u(4),u(5),f.states(n));
+        u=f.samples(n,:);y=record_identification(u(1),u(2),u(3),u(4),u(5),f.states(n));
     end
     history=zeros(4401,4);
     for n=1:4401
-        y=identify_vbemf(0,0,0,0,200,9);
+        y=record_identification(0,0,0,0,200,9);
         history(n,:)=[y(3),y(4),y(6),y(12)];
     end
     truth=f.truth(:);err=[y(3);y(4);y(6)]./truth(1:3)-1;

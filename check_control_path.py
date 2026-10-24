@@ -63,12 +63,23 @@ def check(content):
     # 沿两层信号标签逐路追踪，确认辨识输入为预期的五路低通信号，避免dq错接。
     for i,name in enumerate(['ud_raw','uq_raw','id_raw','iq_raw','we_raw']):
         chartsrc=graph.inputs[f'12088#in:{i+1}'];sid=chartsrc.split('#')[0]
+        if graph.blocks[sid].get('BlockType')=='Inport':
+            parent=graph.parents[graph.owners[sid]]
+            chartsrc=graph.inputs[parent+'#in:'+graph.prop(graph.blocks[sid],'Port','1')]
+            sid=chartsrc.split('#')[0]
         assert graph.prop(graph.blocks[sid],'GotoTag')=='PID_'+name+'_f'
         ft=graph.goto_for(sid);assert graph.inputs[ft+'#in:1']==f'{12200+i}#out:1'
         fs=graph.inputs[f'{12200+i}#in:1'].split('#')[0]
         assert graph.prop(graph.blocks[fs],'GotoTag')=='PID_'+name
         rt=graph.goto_for(fs);assert graph.inputs[rt+'#in:1']==f'{12310+i}#out:1'
-    assert graph.inputs['12560#in:1']=='12096#out:9'
+    ack_source=graph.inputs['12560#in:1']
+    if '12096' in graph.blocks:
+        assert ack_source=='12096#out:9'
+    else:
+        sid=ack_source.split('#')[0]
+        assert graph.prop(graph.blocks[sid],'GotoTag')=='PID_sample_ack'
+        ack_goto=graph.goto_for(sid)
+        assert graph.inputs[ack_goto+'#in:1']=='12088#out:16'
     assert graph.prop(graph.blocks['12560'],'SampleTime')=='Ts' and graph.prop(graph.blocks['12560'],'InitialCondition','0')=='0'
     assert graph.inputs['12561#in:1']=='12560#out:1'
     assert graph.goto_for('12580')=='12561'

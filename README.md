@@ -1,100 +1,86 @@
-# 参数辨识 v9：数据损耗标定与电流/转速差分补偿
+# 参数辨识 v10：命名输出与代码整理
 
-推荐模型：**reduce_emf_accuracy.slx**。`reduce_emf_speedloop.slx` 和 `reduce_emf_identified.slx` 是内容相同的兼容副本。需要兼容原模型的 MATLAB R2024b、Simulink 和 Specialized Power Systems；算法均已嵌入 SLX，直接运行不依赖外部 .m 文件。
+推荐打开 **reduce_emf_readable.slx**。模型中的辨识代码已经修改并嵌入SLX，直接运行无需额外加载`.m`文件。需要与原模型兼容的MATLAB R2024b、Simulink及Specialized Power Systems。
 
-本版基于已确认运行正常的 v8 修改。速度 PI 持续工作、iq 不锁存、Id 基准切换100 ms以及1秒恢复段继续保留。没有把参数误差修正为固定比例，没有预填额定电阻、电感或磁链，也没有恢复会中止辨识的质量门限。
+本次只整理代码风格与接口，电机、控制环、PLL/I/F启动、实验阶段、滤波和数值算法均沿用v9。
 
-主辨识模型仍采用当前电机Ld=Lq的单电感假设。
+## 查看代码
 
-## 这次修正什么
+打开模型后依次进入：
 
-论文式12.25的直接电压差分依赖正负注入时电流和转速相同。速度闭环调节iq后，直接取 `Delta_uq/Delta_ud` 可能把电阻压降、电感交叉项及转速变化混入位置误差；角度小幅偏差又会明显影响电感，并传递到Rs的消元结果。
+**参数辨识与采集 → 参数辨识算法 → 参数辨识（MATLAB Function）**。
 
-v9补充了基于同一PMSM电压方程的数据预处理。这是工程扩展，不能说成论文原文已有的步骤：
+外部可读源码为 [identify_vbemf.m](identify_vbemf.m)，与模型内代码一致。
 
-1. **在原恢复段内提供可观测的损耗标定激励。** 阶段5的150～350 ms，Id参考叠加峰值0.2 A、Hann包络的电频余弦；两端连续，之后仍有650 ms恢复。六个正式采样阶段不加这个额外激励。其用途是让数据能区分电阻和逆变器等效压降，避免在噪声下靠很弱的自然过渡推算。
-2. **使用每个0.6秒阶段的最后0.2秒。** 前0.4秒留给PLL、电流与速度闭环恢复，窗口填满即保存，不按诊断结果拒绝数据。
-3. **连续电压/电流积分标定损耗。** 根据采样电角速度恢复相对坐标角度，将低通后的dq电压、电流转到静止坐标，连续积分，跨阶段5不中断。用两个基准平台的常值/正弦/余弦拟合分离旋转分量，积分中心差满足 `DeltaU=Rcal*DeltaI+Vcal*DeltaD`，求出数据标定的Rcal与等效压降Vcal。
-4. **补偿后再估计位置误差。** 对每个正负窗口逐点形成：
+- 输入按电气量命名：`u_d`、`u_q`、`i_d`、`i_q`、`omega_e`、`experiment_stage`。
+- 每条语句单独一行，使用中文注释，长公式分行。
+- 主流程按初始化、阶段切换、采样、角度及损耗标定、参数递推、输出划分。
+- 电阻消元、损耗标定、角度补偿及窗口诊断分别放入具名辅助函数。
+- 状态使用具名字段，如`estimate.Ls_hat`，不再用`result(3)`等编号表达参数。
 
-```
-x = (ud - Rcal*id - Vcal*Dd)/we + Lhat*iq
-y = (uq - Rcal*iq - Vcal*Dq)/we - Lhat*id
-```
+## 独立输出
 
-以两窗口的平均差方向估计角度，保留±π/2的atan分支。Rcal、Vcal来自积分数据，Lhat来自当前RLS，角度随递推继续修正。
+MATLAB Function不再输出统一的`y`向量。每个参数、标志和诊断量均使用独立命名端口，共31个标量及2组角度历史。
 
-5. **主参数仍逐样本递推。** A1、B1、A2、B2……A2000、B2000，共4000次真实RLS更新；电感/磁链初值为0，P0=10I、遗忘因子1、归一化及Joseph协方差形式保留。最终Rs仍由当前L、磁链及两组q轴方程逐次计算，不直接复制辅助标定电阻。
+| 端口 | 名称 | 含义/单位 |
+|---|---|---|
+| 1 | Ls_hat | 定子电感/H |
+| 2 | psi_f_hat | 永磁体磁链/Wb |
+| 3 | Rs_hat | 定子电阻/Ω |
+| 4、5 | delta_theta_A、delta_theta_B | 两组位置误差/rad |
+| 6、7 | Lpsi_done、Rs_done | 数值计算完成标志 |
+| 8 | ident_status | 辨识运行状态码 |
+| 12、16、17 | rls_updates、sample_ack、diagnostic_code | 迭代次数、采样确认、诊断提示 |
+| 28、29 | Rs_cal、V_inverter_cal | 辅助标定电阻/Ω、等效压降/V |
+| 32、33 | delta_theta_A_history、delta_theta_B_history | 各400点角度历史 |
 
-辅助积分中心拟合采用小数值正则化，不进行参数正负或范围钳制。信号弱、条件数大或不满足稳态时仍输出实际结果，诊断用于判断可信程度。电压积分会受测量偏置和工况影响；新增激励是为提高标定信噪比，不代表所有工况下都能保证精度。
-
-## 模型运行时看哪里
-
-关闭旧模型，再打开 `reduce_emf_accuracy.slx` 运行：
-
-- 速度 PI 全程调节，原来的iq锁存/暂停逻辑保持关闭。
-- 阶段5会出现一小段有意加入的平滑Id纹波，峰值不超过0.2 A；它在正式采样前结束，不是失稳或新的启动过程。
-- 两个Id工作点的三相电流包络不同仍属正常。
-- 运行码仍为0等待、1采集、2预处理、3递推、30完成。-6等质量提示不阻断采集。
-- 原来的L、磁链、Rs及两组角度示波器继续使用。位置误差处理向量最终记录每10次RLS更新的修正角度，共400点。
-- 采集面板下方新增“数据标定R_V_条件数_激励强度”：依次为辅助Rcal/Ω、等效Vcal/V、标定矩阵条件数及矩阵范数。范数只用于同一模型内比较信号强弱，不能当作精度置信度。
-
-本版保留电机、电源、电气连接、I/F启动、速度/电流PI参数、PLL的PI和角度积分、50 Hz五路低通、100微秒采样、求解器及多任务配置。只新增独立的诊断显示支路，原控制通路不改线。
-
-## 记录接口
-
-`param_identification.signals.values` 从27列扩展为 **31列**。前27列原数量含义保留，角度改为补偿后并随递推更新；新增：
-
-| 列 | 含义 |
-|---|---|
-| 28 | 数据积分中心标定的辅助电阻Rcal |
-| 29 | 数据标定的逆变器等效压降Vcal |
-| 30 | 标定矩阵条件数 |
-| 31 | 标定矩阵范数，用于查看激励量级 |
-
-第3/4/6列仍为逐次更新的L、磁链、Rs；第5/7列仍只表示数值计算完成，不是精度验收。第12列为实际RLS更新次数，第17列为首个诊断提示。NaN仅表示未计算或无法定义，不用额定值替代。
-
-`id_raw`、`id_filtered`、`identification_state` 和 `id_iq_reference` 接口不变。`id_iq_reference` 前两列应一致，保持标志应为0。
-
-## 已验证与边界
-
-当前环境没有 MATLAB/Simulink，**尚未执行实际SLX编译或整机精度验证**。用户的实际结果仍需要运行新版确认。
-
-已在GNU Octave执行交付的实际MATLAB函数，连续方程回放包含：维持转矩的iq调节、Id斜坡与标定激励、位置误差瞬态、电压方程中的电流导数、同速率50 Hz低通；覆盖额定工况、逆变器压降、不同电机参数、反转、噪声、轻微速度变化、带电流响应的谐波、两组均为正角度八种工况。其余实际函数回归确认4000次逐样本更新、Id时序、诊断不阻断、负参数不隐藏、缺数据和除零保护。
-
-这些合成回放中L/磁链误差小于0.5%，Rs误差小于2.4%；**该结果不是实际Simulink模型精度的保证**。更改真实参数的回放也能得到更改后的值，用于检查没有把额定值写进输出。
-
-原先独立叠加大电压谐波、却不含对应电流响应的记录，只用于滤波和流程测试，不作为新版物理方程精度验收。
-
-模型检查验证：电气回路、原PI/PLL本体、控制通路、采样与求解器保留，新增31列分解和显示接口一致；所有XML、端点及SID有效；布局无模块重叠、无连线穿过其他模块。算法与验证脚本通过MATLAB语法解析。
-
-## 在MATLAB中复测
-
-直接打开SLX即可运行。如需保存完整证据，将模型及脚本放在同一目录，运行：
+全部端口顺序见 [identification_interface.py](identification_interface.py)。在MATLAB中仅取主要参数时可写：
 
 ```matlab
-report = run_model_validation;
+[Ls_hat, psi_f_hat, Rs_hat, delta_theta_A, delta_theta_B] = ...
+    identify_vbemf(u_d, u_q, i_d, i_q, omega_e, experiment_stage);
 ```
 
-脚本先执行函数回归，再编译并仿真25秒，在结果断言前保存 `id_run_capture.mat`，并输出每段速度统计和新增标定诊断。精度误差只列入报告，不作为阻止参数显示的条件。
+函数具有持久状态，需要按原实验阶段逐拍调用。未完成计算的参数仍返回NaN。
 
-仿真后也可运行 `diagnose_identification`。它自动读取工作区，生成 `identification_diagnosis.mat`，包含正式存储窗口、实验连续数据、角度更新轨迹及诊断；文件通常数MB。RLS解析回放按每拍实际角度重建，兼容旧27列和新31列结果，不改变模型。
+## 模型布局与记录兼容
 
-## 复查与重建
+“参数辨识算法”内每个输出通过一条短线连接同名信号标签。原参数示波器与状态显示直接读取对应物理量，采样确认仍经过一拍Ts延迟反馈给PLL。
+
+“记录与监视”仅在日志边界将命名信号拼成原有31列记录，并提供分组诊断显示。`param_identification`、`id_raw`、`id_filtered`、`identification_state`、`id_iq_reference`的格式不变，原`diagnose_identification`仍可使用。
+
+`record_identification.m`只是旧测试的31列兼容适配器，模型中的辨识函数不调用它。`tests/fixtures/identify_vbemf_v9.m`为逐拍对比保留的原函数，不是当前算法入口。
+
+`reduce_emf_accuracy.slx`、`reduce_emf_speedloop.slx`及`reduce_emf_identified.slx`是内容相同的兼容副本。
+
+## 验证
+
+已在GNU Octave执行实际交付函数：正常、含噪声及反转三组连续物理方程数据，共151,239拍。每拍的全部31个标量和两组400点角度历史均与v9逐位一致，覆盖六段采样、恢复段、4000次真实递推、完成保持、异常输入及重新启动。
+
+结构检查核对独立输出、Stateflow/底层端口、显示及日志映射、采样确认和电气连接。布局检查确认辨识面板及两个新子系统无模块重叠、无连线穿过其他模块。
+
+当前环境没有MATLAB/Simulink，尚未执行SLX实际编译或电机整机仿真。`run_model_validation`可在MATLAB中编译并仿真25秒、保存记录；本次不能据函数回放宣称整机精度提高。
 
 ```text
-python check_accuracy_model.py
-python check_speed_control.py
+python check_readable_model.py
 python check_control_path.py --self-test
+python check_speed_control.py
 python check_power_connections.py --self-test
+python check_readable_layout.py
 ```
 
-历史自测需要Git仓库历史。`tests/fixtures/reduce_emf_speedloop_v8.slx` 为已运行正常的修改前基准，原上传备份也保留。
+生成连续回放数据后，可在MATLAB/Octave执行逐拍对比：
 
 ```text
 python make_accuracy_fixtures.py
 ```
 
-上述命令需要NumPy/SciPy，生成连续物理回放数据，再在MATLAB/Octave运行 `test_accuracy_model`。其他独立测试包括 `test_identification`、`test_speedloop_sequence`、`test_pair_matching`、`test_preview_outputs`、`test_diagnose_identification`；`python test_lowpass.py`后可运行 `test_pipeline`。验证记录位于 `validation_*.txt`。
+```matlab
+test_readable_equivalence;
+```
 
-`python build_accuracy.py` 可从v8基准及当前源代码重建三个内容相同的交付SLX。旧命令 `build_speedloop.py` 和 `check_speedloop_model.py` 分别委托当前重建与检查工具。
+其他原有测试已改为通过兼容适配器调用新的命名接口。验证记录见`validation_readable_*.txt`。
+
+`python build_readable.py`从v9快照和当前辨识源码重建四个交付SLX。旧`build_accuracy.py`、`build_speedloop.py`及对应检查命令委托当前工具，避免重建出端口不匹配的旧接口模型。
+
+v9算法的详细推导和原有仿真边界记录保存在 [docs/algorithm_v9.md](docs/algorithm_v9.md)，其中版本接口说明以本页为准。

@@ -5,7 +5,7 @@ if nargin<1,speeds=[220,50,-220];end
 for w=speeds
     clear identify_vbemf
     stages=[2 3 4 6 7 8];per=6000;total=6*per+4401;Ts=1e-4;
-    initial=identify_vbemf(0,0,0,0,w,0);
+    initial=record_identification(0,0,0,0,w,0);
     F=zeros(total,5);S=zeros(total,1);Y=zeros(total,numel(initial));t=(0:total-1)'*Ts;
     at=0;R=1.8665;L=.00896;psi=.21;
     for k=1:6
@@ -15,12 +15,12 @@ for w=speeds
         for n=1:per
             at=at+1;u=u0+[.01*randn,.01*randn,.001*randn,.001*randn,.02*randn];
             F(at,:)=u;S(at)=stages(k);
-            y=identify_vbemf(u(1),u(2),u(3),u(4),u(5),stages(k));Y(at,:)=y.';
+            y=record_identification(u(1),u(2),u(3),u(4),u(5),stages(k));Y(at,:)=y.';
         end
     end
     for n=1:4401
         at=at+1;F(at,5)=w;S(at)=9;
-        y=identify_vbemf(0,0,0,0,w,9);Y(at,:)=y.';
+        y=record_identification(0,0,0,0,w,9);Y(at,:)=y.';
     end
     assert(y(12)==4000);
     data=struct('id_filtered',record(t,F),'identification_state',record(t,S), ...

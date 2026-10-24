@@ -12,12 +12,12 @@ for mode=1:2
         if s==2 || s==5,d=d+shift;elseif s==3 || s==6,d=d-shift;end
         ud=R*di-w*L*qi-w*psi*sin(d);uq=R*qi+w*L*di+w*psi*cos(d);
         for n=1:6000
-            y=identify_vbemf(ud,uq,di,qi,w,states(s));
+            y=record_identification(ud,uq,di,qi,w,states(s));
             if y(16)==states(s),break;end
         end
         assert(y(16)==states(s));
     end
-    for n=1:4401,y=identify_vbemf(0,0,0,0,w,9);end
+    for n=1:4401,y=record_identification(0,0,0,0,w,9);end
     assert(y(8)==30 && y(12)==4000 && all(isfinite(y([3 4 6]))));
     assert(abs(y(3)/L-1)<.01 && abs(y(4)/psi-1)<.01 && abs(y(6)/R-1)<.02);
     if mode==1,assert(y(3)<0 && y(6)<0);end
@@ -29,11 +29,11 @@ end
 clear identify_vbemf
 for state=[2 3 4 6 7 8]
     for n=1:6000
-        y=identify_vbemf(0,0,0,0,0,state);
+        y=record_identification(0,0,0,0,0,state);
         if y(16)==state,break;end
     end
 end
-for n=1:4401,y=identify_vbemf(0,0,0,0,0,9);end
+for n=1:4401,y=record_identification(0,0,0,0,0,9);end
 assert(y(8)==30 && y(12)==4000 && y(7)==0 && isnan(y(6)));
 fprintf('PASS 仅保留数值除零保护：分母为零的Rs为NaN，其余递推仍完成\n');
 end
