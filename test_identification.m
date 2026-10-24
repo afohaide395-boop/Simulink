@@ -36,8 +36,7 @@ for c=1:numel(names)
             if y(16)<0,failed=true;break;end
         end
         if failed,break;end
-        assert(accepted>=4000,'Collector accepted before settle+window completed');
-        assert(accepted<=4400,'诊断门限不应再使采样等待或超时。');
+        assert(accepted==6000,'应保存每段最后0.2秒窗口，且不因诊断门限等待。');
     end
     if c==9
         y=identify_vbemf(NaN,0,0,0,w,8);failed=true;
@@ -50,14 +49,16 @@ for c=1:numel(names)
         end
         assert(numel(e1)==400 && numel(e2)==400);
     end
-    good=c<=4 || c==8;
+    % 随机片段只检验流程；连续物理波形的精度另由test_accuracy_model覆盖。
+    good=c==1 || c==2 || c==4 || c==8 || c==12;
     if ~failed && c~=6
         assert(y(8)==30 && y(5)==1 && y(12)==4000);
         assert(all(isfinite(y([3 4]))),'调试模式必须保留实际递推结果。');
         assert(all(diff(history(402:end,3))==1));
         if c==5 || c==11,assert(y(17)==-8);end
         if c==7,assert(y(17)==-6);end
-        if c==10 || c==12,assert(y(17)==-3);end
+        if c==10,assert(y(17)==-3);end
+        if c==12,assert(y(17)==0);end
     end
     if good
         assert(y(5)==1,[names{c} ': expected valid L/psi']);
@@ -80,7 +81,7 @@ end
 % 将实际PLL与采集器按模型中的一拍确认相连，验证状态配合及递推过程。
 clear pll_vbemf identify_vbemf
 Ts=1e-4;W=220;E=46.2;th=0;ack=0;
-seen=false(11,1);ticks=zeros(11,1);final=zeros(27,1);
+seen=false(11,1);ticks=zeros(11,1);final=zeros(31,1);
 for n=1:100000
     t=(n-1)*Ts;delta=W*t-th;
     [theta,speed,offset,state]=pll_vbemf(-E*sin(delta),E*cos(delta),double(t>=1),ack);

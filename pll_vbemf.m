@@ -54,7 +54,15 @@ else
     id_step=10*Ts;
     id_ramp=id_ramp+min(max(id_offset-id_ramp,-id_step),id_step);
 end
-id_offset=id_ramp;
+% 仅在恢复段内加入200毫安的平滑标定激励，用于分离电阻与逆变器压降。
+% 150～350毫秒启用，之后仍有650毫秒恢复；六个正式采样段不加此激励。
+id_calibration=0;
+if state==5 && tick>=1500 && tick<=3500
+    pulse_time=(tick-1500)*Ts;
+    envelope=sin(pi*pulse_time/0.2)^2;
+    id_calibration=0.2*envelope*cos(theta_z);
+end
+id_offset=id_ramp+id_calibration;
 vfl_state=int32(state);
 Ed_pll=Ed_hat+injection;
 

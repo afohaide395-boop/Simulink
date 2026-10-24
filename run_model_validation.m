@@ -6,7 +6,8 @@ test_pair_matching;
 test_voltage_ripple;
 test_preview_outputs;
 test_speedloop_sequence;
-file=fullfile(folder,'reduce_emf_speedloop.slx');
+file=fullfile(folder,'reduce_emf_accuracy.slx');
+if ~isfile(file),file=fullfile(folder,'reduce_emf_speedloop.slx');end
 if ~isfile(file),file=fullfile(folder,'reduce_emf_identified.slx');end
 [~,model]=fileparts(file);
 load_system(file); set_param(model,'SimulationCommand','update');
@@ -14,8 +15,8 @@ out=sim(model,'StopTime','25','ReturnWorkspaceOutputs','on');
 r=out.get('param_identification'); st=out.get('identification_state');
 raw=out.get('id_raw'); filtered=out.get('id_filtered'); iqReference=out.get('id_iq_reference');
 y=squeeze(r.signals.values);
-if size(y,2)~=27 && size(y,1)==27, y=y.'; end
-assert(size(y,2)==27,'结果向量宽度应为27列。');
+if size(y,1)~=numel(r.time) && size(y,2)==numel(r.time),y=y.';end
+assert(size(y,2)==31,'新版结果向量宽度应为31列。');
 % 在收敛断言之前保存记录，失败时仍可追查电压纹波、漂移及状态。
 save(fullfile(folder,'id_run_capture.mat'),'r','st','raw','filtered','iqReference');
 report=struct('Ls_H',y(end,3),'psi_Wb',y(end,4),'Rs_ohm',y(end,6), ...
@@ -27,9 +28,11 @@ report=struct('Ls_H',y(end,3),'psi_Wb',y(end,4),'Rs_ohm',y(end,6), ...
     'voltage_rms_after_cycle_mean',y(end,20:21), ...
     'voltage_drift_limit_ratio',y(end,22:23), ...
     'voltage_ripple_limit_ratio',y(end,24:25),'cycle_samples',y(end,26), ...
-    'last_sampling_stage',y(end,27));
+    'last_sampling_stage',y(end,27),'data_calibrated_R',y(end,28), ...
+    'data_calibrated_voltage_error',y(end,29),'calibration_condition',y(end,30), ...
+    'calibration_excitation',y(end,31));
 disp(report);
-figure('Name','虚拟反电动势辨识v8：速度PI持续调节与实际参数曲线');
+figure('Name','虚拟反电动势辨识v9：电流及转速差分补偿后的实际参数曲线');
 subplot(4,1,1); plot(st.time,st.signals.values); ylabel('state'); grid on;
 subplot(4,1,2); plot(r.time,y(:,3)*1000); ylabel('Ls (mH)'); grid on;
 subplot(4,1,3); plot(r.time,y(:,4)); ylabel('psi (Wb)'); grid on;

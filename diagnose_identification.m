@@ -33,7 +33,8 @@ elseif isfield(data,'out')
 else
     error('记录中缺少五路低通数据、实验阶段或辨识结果。');
 end
-[tf,F]=unpack(filtered,5);[ts,S]=unpack(stage,1);[tr,Y]=unpack(result,27);
+[tf,F]=unpack(filtered,5);[ts,S]=unpack(stage,1);[tr,Y]=unpack(result,0);
+assert(size(Y,2)>=27,'辨识结果至少应包含27列。');
 Ts=median(diff(tf));assert(isfinite(Ts) && Ts>0,'采样时间无效。');
 assert(abs(Ts-1e-4)<1e-8,'此回放脚本对应100微秒采样的v7/v8模型。');
 phases=[2 3 4 6 7 8];windows=zeros(2000,5,6);means=zeros(6,5);timing=zeros(6,4);
@@ -53,14 +54,21 @@ for k=1:6
     timing(k,:)=[s,ts(first),tr(accepted),N];
 end
 finalVector=Y(end,:);angles=finalVector(1:2);scaleParameters=[.01;.2];
+% 新版角度会随L递推而更新，重放时必须使用每一拍实际采用的角度。
+valid=find(Y(:,12)>=1 & Y(:,12)<=4000);
+[iterations,firstAt]=unique(Y(valid,12),'first');
+iterationRows=zeros(4000,1);iterationRows(iterations)=valid(firstAt);
+assert(all(iterationRows>0),'记录中缺少部分RLS更新拍。');
 H=zeros(4000,2);z=zeros(4000,1);Amean=zeros(2,2);bmean=zeros(2,1);
 rawAngles=zeros(2,1);normalizedAngles=zeros(2,1);pairChanges=zeros(2,5);
 for g=1:2
     base=1+3*(g-1);W=windows(:,:,base);positive=windows(:,:,base+1);negative=windows(:,:,base+2);
     id=W(:,3);iq=W(:,4);we=W(:,5);d=angles(g);
     lambda=we.*(id.^2+iq.^2);eta=we.*(id*cos(d)+iq*sin(d));v=W(:,2).*id-W(:,1).*iq;
-    raw=[lambda*.01,eta*.2];normalizer=max(sqrt(sum(raw.^2,2)),1e-12);
-    rows=g:2:4000;H(rows,:)=raw./normalizer;z(rows)=v./normalizer;
+    rows=g:2:4000;actualAngles=Y(iterationRows(rows),g);
+    etaReplay=we.*(id.*cos(actualAngles)+iq.*sin(actualAngles));
+    raw=[lambda*.01,etaReplay*.2];normalizer=max(sqrt(sum(raw.^2,2)),1e-12);
+    H(rows,:)=raw./normalizer;z(rows)=v./normalizer;
     Amean(g,:)=[mean(lambda),mean(eta)];bmean(g)=mean(v);
     difference=mean(positive-negative,1);pairChanges(g,:)=difference;
     rawAngles(g)=wrap_half(atan2(difference(2),difference(1)));
@@ -96,7 +104,13 @@ report=struct('stage_columns',{{'阶段','ud/V','uq/V','id/A','iq/A','we/(rad/s)
     'unregularized_least_squares',leastSquaresResult,'singular_values',singularValues, ...
     'angle_sensitivity_L_psi_per_rad',sensitivity,'RLS_replay_difference',ridgeResult-finalVector(3:4).', ...
     'status',finalVector(8),'diagnostic',finalVector(17),'RLS_iterations',finalVector(12));
-save(outputFile,'report','windows','finalVector','Ts','-v7');
+ix=tf>=min(timing(:,2))-Ts*1e-3 & tf<=max(timing(:,3))+Ts*1e-3;
+continuous=struct('time',tf(ix),'values',F(ix,:));
+jx=ts>=min(timing(:,2))-Ts*1e-3 & ts<=max(timing(:,3))+Ts*1e-3;
+phase_trace=struct('time',ts(jx),'state',S(jx,1));
+angle_history=Y(iterationRows,[1 2 12]);
+if numel(finalVector)>=31,report.data_loss_calibration=finalVector(28:31);end
+save(outputFile,'report','windows','continuous','phase_trace','angle_history','finalVector','Ts','-v7');
 disp('六段实际存储窗口均值：[阶段 ud uq id iq we]');disp(report.stage_means);
 disp('各组正注入减负注入：[Delta_ud Delta_uq Delta_id Delta_iq Delta_we]');disp(pairChanges);
 disp('原模型[L,磁链]及RLS解析回放，两行应接近：');disp([report.final_L_psi.';ridgeResult.']);
@@ -112,7 +126,8 @@ else
     t=record.time(:);v=squeeze(record.signals.values);
 end
 if size(v,1)~=numel(t) && size(v,2)==numel(t),v=v.';end
-assert(size(v,1)==numel(t) && size(v,2)==width,'记录维度不匹配。');
+assert(size(v,1)==numel(t),'记录长度不匹配。');
+if width>0,assert(size(v,2)==width,'记录维度不匹配。');end
 end
 
 function d=wrap_half(d)

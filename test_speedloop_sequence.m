@@ -9,8 +9,10 @@ for n=1:100000
     t=(n-1)*Ts;delta=W*t-th;
     [theta,we,id,state]=pll_vbemf(-E*sin(delta),E*cos(delta),double(t>=1),0);
     th=mod(theta+Ts*we,2*pi);states(double(state)+1)=true;
-    assert(abs(id-last)<=10*Ts+1e-12,'Id发生了超过斜率限制的跳变。');
-    assert(id>=-1-1e-12 && id<=1e-12);
+    if state~=5 || state5<1499 || state5>3500
+        assert(abs(id-last)<=10*Ts+1e-12,'正常Id工作点切换超过斜率限制。');
+    end
+    assert(id>=-1.2-1e-12 && id<=1e-12);
     if state==5
         state5=state5+1;ne=ne+1;entry(ne)=id;
     elseif state>=6 && state<=8
@@ -23,10 +25,12 @@ end
 assert(all(states([1 3:10])) && ~states(11));
 assert(state5==10000 && ne==10000 && nx==1000);
 assert(abs(entry(1)+.001)<1e-12 && abs(entry(500)+.5)<1e-12);
-assert(all(abs(entry(1000:end)+1)<1e-12),'Id切入应在100毫秒内完成。');
+assert(all(abs(entry(1000:1499)+1)<1e-12),'Id切入应在100毫秒内完成。');
+assert(all(abs(entry(3501:end)+1)<1e-12),'正式采样前应留有650毫秒恢复时间。');
+assert(max(abs(entry(1500:3500)+1))>.1 && max(abs(entry(1500:3500)+1))<=.2+1e-12);
 assert(abs(exit(1)+.999)<1e-12 && abs(exit(500)+.5)<1e-12);
 assert(abs(exit(1000))<1e-12,'Id退出应在100毫秒内完成。');
-fprintf('PASS Id切入/退出均为100ms，斜率不超过10A/s；工作点恢复段1s，采样前已稳定\n');
+fprintf('PASS Id基准切入/退出100ms；仅恢复段叠加200ms、峰值0.2A平滑标定激励，采样前恢复650ms\n');
 % I/F复位时仍立即清零，保留原有模式复位语义。
 clear pll_vbemf
 for n=1:40000

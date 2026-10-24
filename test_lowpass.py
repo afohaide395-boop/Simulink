@@ -18,19 +18,9 @@ aliased=np.cos(2*np.pi*10000*t)
 y=signal.lfilter(b,a,aliased)
 assert abs(np.mean(y[-2000:])-1)<1e-8
 print('PASS limitation: 10kHz already aliased to DC at the source remains DC after this filter')
-# 生成含可分辨六倍电频纹波的五路同速率数据。
-R=1.8665;L=.00896;psi=.21;w=220;states=[2,3,4,5,6,7,8]
-means=[]
-for state in states:
- g=int(state>4);di=[0,-1][g];qi=4;d=[.08,-.12][g]
- if state in [3,7]:d+=.01
- if state in [4,8]:d-=.01
- means.append([R*di-w*L*qi-w*psi*np.sin(d),R*qi+w*L*di+w*psi*np.cos(d),di,qi,w])
-per=7000;stages=np.repeat(np.arange(7),per);time=np.arange(len(stages))*Ts
-M=np.array(means);samples=np.empty((len(time),5))
-for j,harmonic in enumerate([.6,.6,.03,.04,.4]):
- x=M[stages,j]+harmonic*np.sin(6*w*time+.3*j)
- samples[:,j]=signal.lfilter(b,a,x)
-io.savemat(HERE/'pipeline_fixture.mat',{'samples':samples,'states':np.repeat(states,per)[:,None]},do_compression=True)
+# 连续物理工况包含电流响应、Id斜坡和标定激励，供实际辨识器集成回放。
+import make_accuracy_fixtures
+import shutil
+shutil.copy2(HERE/'nominal_fixture.mat',HERE/'pipeline_fixture.mat')
 np.savez_compressed(HERE/'lowpass_design.npz',b=b,a=a,Ts=Ts)
-print('PASS generated same-rate LPF fixture for actual RLS integration test')
+print('PASS generated continuous same-rate LPF fixture for actual identification integration')
