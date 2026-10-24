@@ -11,6 +11,7 @@ from build_checked import TARGETS
 from check_organized_model import ResolvedGraph, parameters, canonical
 from check_power_connections import physical_lines, physical_nets
 from model_geometry import Geometry, field, is_orthogonal, crosses_rectangle
+from audit_model_load_paths import audit
 
 HERE = Path(__file__).resolve().parent
 
@@ -98,6 +99,8 @@ def check_visible_graphs(graph, check_rectangles=True):
 
 
 def check(model, reference):
+    load_errors = audit(model)
+    assert not load_errors, ('加载元数据一致性失败', load_errors[:3])
     before = ResolvedGraph(reference.read_bytes())
     after = ResolvedGraph(model.read_bytes())
     assert set(before.blocks) <= set(after.blocks)
@@ -160,12 +163,13 @@ def check(model, reference):
     print('PASS 所检图中无斜线、模块重叠或信号线穿模块；Goto/From唯一可解析')
     print(f'PASS {compared}个原输入的来源保留；原悬空负载输入显式接零，备用模块隔离停用')
     print('PASS 电气回路、所有算法及Stateflow设置保留；XML/SID/子系统关系有效')
+    print('PASS 连线Src先于Points；HMI及记录信号路径与移动后的模块一致')
     print('上述为离线检查；MATLAB脚本另按真实PortHandles重连、检查并编译，云端尚未执行。')
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=Path, default=HERE / 'reduce_emf_checked.slx')
+    parser.add_argument('--model', type=Path, default=HERE / 'reduce_emf_load_fixed.slx')
     parser.add_argument('--reference', type=Path, default=HERE / 'tests/fixtures/reduce_emf_organized_v11.slx')
     parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()

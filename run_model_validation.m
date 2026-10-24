@@ -6,7 +6,8 @@ test_pair_matching;
 test_voltage_ripple;
 test_preview_outputs;
 test_speedloop_sequence;
-file=fullfile(folder,'reduce_emf_checked_native.slx');
+file=fullfile(folder,'reduce_emf_load_fixed.slx');
+if ~isfile(file),file=fullfile(folder,'reduce_emf_checked_native.slx');end
 if ~isfile(file),file=fullfile(folder,'reduce_emf_checked.slx');end
 if ~isfile(file),file=fullfile(folder,'reduce_emf_organized.slx');end
 if ~isfile(file),file=fullfile(folder,'reduce_emf_readable.slx');end

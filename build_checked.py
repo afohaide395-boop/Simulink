@@ -1,6 +1,7 @@
-"""修复v11可见图中的悬空端口、隐式走线和斜线，并生成MATLAB原生重连清单。"""
+"""生成分组模型并修正Src/Points加载顺序及监测路径；不改动计算算法。"""
 from pathlib import Path
 from zipfile import ZipFile
+from io import BytesIO
 import json
 import xml.etree.ElementTree as E
 
@@ -102,11 +103,15 @@ def build():
             points = route(source, destination, geometry)
             prop(wire, 'ZOrder', 200000 + index)
             prop(wire, 'Points', encode_points(points))
-            # SLX places geometry before the endpoint references; use that conventional order.
-            for name in ['ZOrder', 'Points']:
-                item = wire.find(f"P[@Name='{name}']")
-                wire.remove(item)
-                wire.insert(0, item)
+            # The loader needs Src before Points. Matching native order is essential:
+            # Name / ZOrder / Src / Points / Dst. Points must never be moved to the front.
+            zorder = wire.find("P[@Name='ZOrder']")
+            wire.remove(zorder)
+            source_item = wire.find("P[@Name='Src']")
+            wire.insert(list(wire).index(source_item), zorder)
+            points_item = wire.find("P[@Name='Points']")
+            wire.remove(points_item)
+            wire.insert(list(wire).index(source_item) + 1, points_item)
             if ref != '13400':
                 source_sid, source_port = source.split('#out:')
                 destination_sid, destination_port = destination.split('#in:')
@@ -123,12 +128,41 @@ def build():
     machine = E.fromstring(data['simulink/stateflow/machine.xml'])
     prop(machine.find(".//instance[@id='64']"), 'name', '备用模型_已停用/Subsystem/MATLAB Function1')
     save('simulink/stateflow/machine.xml', machine)
-    output = HERE / 'reduce_emf_checked.slx'
+    # Resolve current paths from the actual tree rather than retaining old top-level paths.
+    staged = BytesIO()
+    with ZipFile(staged, 'w') as archive:
+        for item in entries:
+            archive.writestr(item, data[item.filename])
+        for name in set(data) - {item.filename for item in entries}:
+            archive.writestr(name, data[name])
+    from check_organized_model import ResolvedGraph
+    graph = ResolvedGraph(staged.getvalue())
+    diagram = E.fromstring(data['simulink/blockdiagram.xml'])
+    old_paths = {}
+    for record in diagram.findall(".//Object[@PropName='InstrumentedSignals']//MATStruct"):
+        sid = record.find("Field[@Name='SID_']")
+        path = record.find("Field[@Name='BlockPath_']")
+        if sid is None or path is None:
+            continue
+        actual = graph.block_path(sid.text).replace('\n', ' ')
+        old_paths[path.text] = actual
+        path.text = actual
+    save('simulink/blockdiagram.xml', diagram)
+    interface = json.loads(data['simulink/graphicalInterface.json'])
+    for record in interface['GraphicalInterface'].get('TestPointedSignals', []):
+        old_path = record['FullBlockPath'].removeprefix('$bdroot/')
+        if old_path in old_paths:
+            record['FullBlockPath'] = '$bdroot/' + old_paths[old_path]
+    data['simulink/graphicalInterface.json'] = json.dumps(interface, ensure_ascii=False, indent=4).encode()
+    output = HERE / 'reduce_emf_load_fixed.slx'
     with ZipFile(output, 'w') as archive:
         for item in entries:
             archive.writestr(item, data.pop(item.filename))
         for name, content in data.items():
             archive.writestr(name, content)
+    from audit_model_load_paths import audit
+    assert not audit(output), '加载顺序或监测路径一致性检查失败'
+    (HERE / 'reduce_emf_checked.slx').write_bytes(output.read_bytes())
     (HERE / 'organized_wiring_manifest.json').write_text(json.dumps({'format': 1, 'connections': manifest}, indent=2))
     print(output, f'：{len(manifest)}条显式信号线，附MATLAB原生端口重连清单。')
 

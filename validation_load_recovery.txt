@@ -1,0 +1,15 @@
+用户报告：Windows MATLAB R2024b Update 8（24.2.0.3157250），模型窗口出现前Access violation。
+相关调用栈符号（已去除会话、授权、进程及地址标识）：
+gp_SigPropStr -> sseg_source_location -> slsSegmentConnectionParameter::getPortType -> slsPTagConstructor::finishObject -> XML加载器
+
+v12崩溃样本：tests/fixtures/reduce_emf_checked_v12_crash.slx（仅供离线回归，禁止用MATLAB打开）
+离线检出：305处Src/Points倒序；2处HMI路径错误；2处记录路径错误。
+加载结构修正版：reduce_emf_load_fixed.slx
+修正版加载顺序/路径审计：通过
+修正范围：九个图的连线P标签顺序及两个监测元数据文件。
+当前云端未执行MATLAB实际打开、编译或仿真，不能确认唯一崩溃根因或运行结果。
+
+恢复文件：reduce_emf_recovery_v8.slx
+与此前记录正常的tests/fixtures/reduce_emf_speedloop_v8.slx逐字节一致。
+恢复文件SHA256：57908e1e783b14f056bc3386c21f46c1826ef29ce5926cf6a3a757542352bfd7
+未重写恢复文件的XML/Stateflow/层次/端口/编辑器数据。

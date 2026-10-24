@@ -12,7 +12,7 @@ from model_geometry import Geometry
 def main():
     folder = Path(__file__).resolve().parent
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=Path, default=folder / 'reduce_emf_checked.slx')
+    parser.add_argument('--model', type=Path, default=folder / 'reduce_emf_load_fixed.slx')
     parser.add_argument('--output-dir', type=Path)
     args = parser.parse_args()
     graph = ResolvedGraph(args.model.read_bytes())
