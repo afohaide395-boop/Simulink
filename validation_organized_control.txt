@@ -1,0 +1,5 @@
+PASS iq选择器及I/F连接正确；实际保持使能关闭由check_speed_control.py逐拍核对
+PASS 五路低通映射正确；采样完成/数值错误反馈经一拍Ts延迟到PLL输入4，不作质量验收
+PASS regression: previous selected-iq self-feedback is detected as a cyclic dependency
+PASS 所有实验阶段逐拍核对：保持使能0，iq持续跟随速度PI，速度PI误差不置零；I/F仍选择7A
+PASS 回归检查能检出用户上传模型中的冻结行为：辨识保持使能仍在某些阶段激活

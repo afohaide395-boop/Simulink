@@ -1,0 +1,10 @@
+root overlapping blocks: []
+root segments crossing other block interiors: 0
+13210 overlapping blocks: []
+13210 segments crossing other block interiors: 0
+13220 overlapping blocks: []
+13220 segments crossing other block interiors: 0
+13230 overlapping blocks: []
+13230 segments crossing other block interiors: 0
+13240 overlapping blocks: []
+13240 segments crossing other block interiors: 0

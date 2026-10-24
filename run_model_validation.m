@@ -6,7 +6,8 @@ test_pair_matching;
 test_voltage_ripple;
 test_preview_outputs;
 test_speedloop_sequence;
-file=fullfile(folder,'reduce_emf_readable.slx');
+file=fullfile(folder,'reduce_emf_organized.slx');
+if ~isfile(file),file=fullfile(folder,'reduce_emf_readable.slx');end
 if ~isfile(file),file=fullfile(folder,'reduce_emf_accuracy.slx');end
 if ~isfile(file),file=fullfile(folder,'reduce_emf_speedloop.slx');end
 if ~isfile(file),file=fullfile(folder,'reduce_emf_identified.slx');end
