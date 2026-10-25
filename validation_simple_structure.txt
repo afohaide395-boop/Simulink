@@ -1,0 +1,8 @@
+PASS iq选择器及I/F连接正确；实际保持使能关闭由check_speed_control.py逐拍核对
+PASS 五路低通映射正确；采样完成/数值错误反馈经一拍Ts延迟到PLL输入4，不作质量验收
+PASS 所有实验阶段逐拍核对：保持使能0，iq持续跟随速度PI，速度PI误差不置零；I/F仍选择7A
+PASS 嵌入脚本与源文件一致；Stateflow、Function、S-Function和日志的六入十二出映射一致
+PASS 删除105个诊断/历史端口及辅助块；224条可见信号线和底层封装端口完整
+PASS 可见图及底层封装无离线发现的斜线、悬空活动端口或连线穿模块
+PASS 只改辨识的5个内部文件，I/F、PI、PLL、电机、电气连接和求解器等均逐字节保留
+PASS Src先于Points，HMI/记录路径有效；这是离线结构检查，尚未执行MATLAB加载/编译

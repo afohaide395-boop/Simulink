@@ -1,0 +1,4 @@
+PASS MATLAB syntax tree identify_simple.m
+PASS MATLAB syntax tree test_simple_identification.m
+PASS embedded MATLAB Function syntax tree
+语法解析不等同于MATLAB Function代码生成或SLX编译。

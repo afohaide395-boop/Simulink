@@ -77,9 +77,11 @@ def check(content):
         assert ack_source=='12096#out:9'
     else:
         sid=ack_source.split('#')[0]
-        assert graph.prop(graph.blocks[sid],'GotoTag')=='PID_sample_ack'
+        ack_tag=graph.prop(graph.blocks[sid],'GotoTag')
+        assert ack_tag in {'PID_sample_ack','PID_ack'}
         ack_goto=graph.goto_for(sid)
-        assert graph.inputs[ack_goto+'#in:1']=='12088#out:16'
+        ack_port=10 if ack_tag=='PID_ack' else 16
+        assert graph.inputs[ack_goto+'#in:1']==f'12088#out:{ack_port}'
     assert graph.prop(graph.blocks['12560'],'SampleTime')=='Ts' and graph.prop(graph.blocks['12560'],'InitialCondition','0')=='0'
     assert graph.inputs['12561#in:1']=='12560#out:1'
     assert graph.goto_for('12580')=='12561'
