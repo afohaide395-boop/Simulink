@@ -28,3 +28,9 @@ fc=0.01Hz、30粒子、150代、初始散布、惯性权重及学习因子均沿
 [validation.txt](validation.txt)记录GNU Octave实际函数回放：使用不同于粒子初始中心的电机参数、负电角速度、正负角度、变化电流及前向差分，执行完整150代，另核对角度保存、结果保持、重新启动及缺数据不辨识。
 
 这不是MATLAB/Simulink编译或整机仿真；不以理想方程数据回放误差承诺整机辨识精度。
+
+## prev_stage代码生成初始化修正
+
+用户在MATLAB Function编译时报告prev_stage赋值前读取。已在联合初始化条件之前增加独立的isempty(prev_stage)初始化，共三行；其余函数代码不变。该错误会阻断后续类型/大小推断，不应据此随意修改输出端口宽度。
+
+validation_initialization.txt补充检查不同阶段首次调用及复位的四路标量输出；验证环境为Octave，仍不是MATLAB Coder编译结果。

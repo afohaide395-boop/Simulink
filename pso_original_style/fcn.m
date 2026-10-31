@@ -18,6 +18,9 @@ persistent ready1 ready2 pso_iter
 persistent X V pbest pbest_val gbest gbest_val
 
 stage = double(stage);
+if isempty(prev_stage)
+    prev_stage = -1;
+end
 if isempty(i) || (stage ~= prev_stage && (stage == 0 || stage == 2))
     ud0 = zeros(5001,1);uq0 = zeros(5001,1);id0 = zeros(5001,1);iq0 = zeros(5001,1);we0 = zeros(5001,1);
     ud1 = zeros(5001,1);uq1 = zeros(5001,1);id1 = zeros(5001,1);iq1 = zeros(5001,1);we1 = zeros(5001,1);

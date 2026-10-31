@@ -1,0 +1,4 @@
+PASS 各阶段首次调用、四路标量输出及整数阶段复位。
+另通过MATLAB语法解析，并检查prev_stage的独立初始化先于首次读取。
+本次只增加三行初始化，其余函数代码不变。
+验证环境：GNU Octave 9.4.0；尚未在MATLAB Coder/Simulink中实际编译。
