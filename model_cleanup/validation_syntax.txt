@@ -1,0 +1,8 @@
+PASS MATLAB语法解析 fcn.m
+PASS MATLAB语法解析 test_cleanup_identification.m
+PASS 沿用原代码标识符，无新增辅助函数或变量命名体系
+PASS 嵌入辨识脚本与源文件一致
+PASS Scope配置表达式语法 电机与观测器_角度及误差对比
+PASS Scope配置表达式语法 电机运行_三相电流转矩转速
+PASS Scope配置表达式语法 参数辨识_电感与磁链
+语法解析不能替代MATLAB/Simulink代码生成和编译。
