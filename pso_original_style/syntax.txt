@@ -1,0 +1,3 @@
+PASS MATLAB语法解析 fcn.m
+PASS MATLAB语法解析 test_original_style.m
+语法解析不等同于MATLAB Function代码生成或模型编译。
